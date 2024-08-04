@@ -2,7 +2,7 @@
 
 ## Get All IPs from Shodan
 
-```cat domains.txt | sXtract -ip```
+```cat domains.txt | sXtract -ip``` [link](https://github.com/Vulnpire/shodanXtract).
 
 ## Uncover
 
