@@ -2,7 +2,7 @@
 
 ## Get All IPs from Shodan
 
-```cat domains.txt | sXtract -ip``` or ```curl -s "https://www.shodan.io/search/facet?query=ssl.cert.subject.cn%3A%22target.com%22&facet=ip" | grep -oP '(?<=<strong>)[^<]+(?=</strong>)' | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}```
+```cat domains.txt | sXtract -ip```
 
 ## Uncover
 
