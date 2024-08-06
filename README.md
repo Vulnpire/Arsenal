@@ -32,6 +32,8 @@
 
 ```egrep -ri ^WEB /opt/useful/SecLists/ | sed 's/^[^:]*://' | anew list.txt```
 
+#
+
 # One-liners
 
 ## SQLI Prone Params
@@ -73,3 +75,7 @@
 ## IDOR Prone Endpoints & Params
 
 `uri.txt | sort -u | grep -Ei '\?invoice=|changepassword\?user=|showImage|accessPage\?menuitem=|user_id=|MyPictureList=|profile_id=|account_id=|order_id=|page_id=|product_id=|session_id=|invoice_id=|doc_id='`
+
+## Fast Nmap Scan
+
+`ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4`ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4
