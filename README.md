@@ -78,4 +78,4 @@
 
 ## Fast Nmap Scan
 
-`ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4`ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4
+`ports=$(nmap -p- --min-rate=1000 -T4 -Pn $IP | grep ^[0-9] | cut -d '/' -f 1 | tr '\n' ',' | sed s/,$//) && nmap -p$ports -sC -sV -D RND:13.37.73.31 -Pn $IP --min-rate=500 -T4`
