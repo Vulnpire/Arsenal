@@ -17,11 +17,11 @@ shosubgo -f wildcards.txt -s $SHODAN_API_KEY | anew sub.txt && cat sub.txt | sor
 
 ### Probing
 axiom-scan sub.txt -m dnsx -o dnsx.txt --rm-logs
-axiom-scan dnsx.txt -m naabu -anew ports.txt && rm dnsx.txt # For passive scanning - cat dnsx.txt | spymap -c 100 -s $SHODAN_API_KEY | anew ports.txt
-axiom-scan ports.txt -m httpx -threads 300 -mc 200 -rl 250 -random-agent -title -td -probe -sc -ct -server -anew techs.txt --rm-logs && mv ports.txt ports/
+#axiom-scan dnsx.txt -m naabu -anew ports.txt && rm dnsx.txt # For passive scanning - cat dnsx.txt | spymap -c 100 -s $SHODAN_API_KEY | anew ports.txt
+axiom-scan dnsx.txt -m httpx -threads 300 -rl 250 -random-agent -title -td -probe -sc -ct -server -ports 3000,5000,8080,8000,8081,8888,8009,8070,8071,8100,8083,8073,8099,8092,8074,8043,8035,7070,9001,7001,4443 -anew techs.txt --rm-logs # && mv ports.txt ports/
 
 ### Parsing
-cat techs.txt | awk '{print $1}' > alive.txt
+cat techs.txt | grep "200" | awk '{print $1}' > alive.txt
 mv alive.txt techs.txt subdomains/ && rm sub.txt
 
 ### Crawling
