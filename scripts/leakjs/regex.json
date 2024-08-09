@@ -1,0 +1,11 @@
+[
+    {"apiName": "AWS Access Key ID", "pattern": "[A-Z0-9]{20}" },
+    {"apiName": "Stripe API Key", "pattern": "sk_live_[0-9a-zA-Z]{24}"},
+    {"apiName": "JWT (JSON Web Token)", "pattern": "\\beyJ[a-zA-Z0-9_-]*\\.[a-zA-Z0-9_-]*\\.[a-zA-Z0-9_-]*\\b"},
+    {"apiName": "Google Cloud Platform API Key", "pattern": "\\bAIza[0-9A-Za-z_]{35}\\b"},
+    {"apiName": "Microsoft Azure API Key", "pattern": "[A-Za-z0-9]{44}"},
+    {"apiName": "Twilio API Key", "pattern": "\\bSK[0-9a-fA-F]{32}\\b"},
+    {"apiName": "SendGrid API Key", "pattern": "\\bSG\\.[a-zA-Z0-9_-]{22}\\.[a-zA-Z0-9_-]{43}\\b"},
+    {"apiName": "Facebook Access Token", "pattern": "\\bEAACEdEose0cBA[a-zA-Z0-9_-]{60}\\b"},
+    {"apiName": "GitHub Personal Access Token", "pattern": "\\bghp_[a-zA-Z0-9]{20}\\b"}
+]
