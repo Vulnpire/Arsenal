@@ -173,7 +173,7 @@ Catch a Signal:
 
 > handle <signal> [actions]
 
--- actions: stop, ignore, print.
+- actions: stop, ignore, print.
 
 Send a Signal to the Program:
 
@@ -220,16 +220,21 @@ Run Commands on Startup:
 
 ## Common GDB Commands
 
-Command	    Description
+Command	      Description
 
-`run`	    Start the program
-`start`	    Restart the program from the beginning
-`break`	    Set a breakpoint
-`continue`	Continue execution
-`next`   	Step to the next line
-`step`	    Step into a function
-`backtrace`	Show the call stack
-`print`	    Print a variable or expression
-`watch` 	Break when a variable changes
-`info`  	Display various information
-`quit`  	Quit GDB
+- `run`	      Start the program.
+- `start`	    Restart the program from the beginning.
+- `break`	    Set a breakpoint.
+- `continue`	Continue execution.
+- `next`   	  Step to the next line.
+- `step`	    Step into a function.
+- `backtrace`	Show the call stack.
+- `print`	    Print a variable or expression.
+- `watch` 	  Break when a variable changes.
+- `info`  	  Display various information.
+- step	Step into a function
+backtrace	Show the call stack
+print	Print a variable or expression
+watch	Break when a variable changes
+info	Display various information
+quit	Quit GDB`quit`    	Quit GDB.
