@@ -232,9 +232,4 @@ Command	      Description
 - `print`	    Print a variable or expression.
 - `watch` 	  Break when a variable changes.
 - `info`  	  Display various information.
-- step	Step into a function
-backtrace	Show the call stack
-print	Print a variable or expression
-watch	Break when a variable changes
-info	Display various information
-quit	Quit GDB`quit`    	Quit GDB.
+- `quit`	    Quit.
