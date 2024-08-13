@@ -43,3 +43,20 @@
 > post.new - Create a new Medium post
 
 > webapp.new - Create a new Microsoft PowerApps web app
+
+
+## Burp Regex ##
+
+regex for advance scope control for clean http history:
+
+`(^|^[^:]+:\/\/|[^\.]+\.)target.*`
+
+matches urls related to target, including subs.
+
+`.*\.target\.com$`
+
+captures all urls that end with "google.com" including its subdomains.
+
+`.*\.target\..*$`
+
+matches any urls that have "target" in the domain name, regardless of the tld.
