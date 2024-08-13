@@ -6,6 +6,7 @@ FILE="wildcards.txt"
 
 # Initialize flags
 SUBS=false
+MASS_DNS=false
 IP=false
 CRAWL=false
 WAYMORE=false
@@ -21,6 +22,10 @@ while [[ "$#" -gt 0 ]]; do
             ;;
         -subs)
             SUBS=true
+            shift
+            ;;
+        -mass-dns)
+            MASS_DNS=true
             shift
             ;;
         -ip)
@@ -44,7 +49,7 @@ while [[ "$#" -gt 0 ]]; do
             shift
             ;;
         *)
-            echo "Usage: $0 [-f file] [-subs] [-ip] [-crawl] [-waymore] [-check] [-all]"
+            echo "Usage: $0 [-f file] [-subs] [-ip] [-crawl] [-waymore] [-check] [-all] [-mass-dns]"
             exit 1
             ;;
     esac
@@ -58,10 +63,22 @@ run_subdomain_enumeration() {
     cat sub.txt | sort -u > temp && mv temp sub.txt
 }
 
+run_dns_mass() {
+    axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
+    axiom-scan sub.txt -m subfinder -all -silent -recursive --rm-logs -anew temp && cat temp | anew sub.txt && rm temp
+    axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
+    shosubgo -f "$FILE" -s "$SHODAN_API_KEY" | anew sub.txt
+    axiom-scan "$FILE" -m findomain --external-subdomains -r -anew temp && mv temp sub.txt
+    cat sub.txt | dnsgen - > temp && mv temp sub.txt
+    cat sub.txt | sort -u > temp && mv temp sub.txt
+    run_probing
+}
+
 run_probing() {
+    axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > /home/op/lists/resolvers.txt"
     axiom-scan sub.txt -m dnsx -threads 300 -o dnsx.txt --rm-logs
-    axiom-scan dnsx.txt -m httpx -threads 300 -mc 200,201,202,203,204,205,207,301,403, -rl 250 -random-agent -title -td -probe -sc -ct -server -ports 3000,5000,8080,8000,8081,8888,8069,8009,8070,8088,8050,8085,8089,8040,8020,8051,8087,8071,8011,8030,8061,8072,8100,8083,8073,8099,8092,8074,8043,8035,7070,9001,7001,4443 -anew techs.txt --rm-logs
-    awk '{print $1}' techs.txt > subdomains/alive.txt && mv techs.txt subdomains/
+    axiom-scan dnsx.txt -m httpx -threads 300 -rl 250 -random-agent -title -td -probe -sc -ct -server -anew techs.txt --rm-logs
+    cat techs.txt | grep -v "FAILED" | awk '{print $1}' > subdomains/alive.txt && mv techs.txt subdomains/
     rm sub.txt
 }
 
@@ -70,7 +87,7 @@ run_sub_portscan() {
     axiom-scan ips.check -m dnsx -threads 300 -o sub.ips.dnsx --rm-logs
     cat sub.ips.dnsx | sed -e 's/^http:\/\/\(.*\)/\1/' -e 's/^https:\/\/\(.*\)/\1/' > temp && mv temp sub.ips.dnsx && rm ips.check
     for i in $(cat sub.ips.dnsx);do shodan host $i;done | anew check/ips/sub.ports
-    axiom-scan sub.ips.dnsx -m httpx -threads 300 -rl 200 -ports 3000,5000,8080,8000,8081,8888,8069,8009,8070,8088,8050,8085,8089,8040,8020,8051,8087,8071,8011,8030,8061,8072,8100,8083,8073,8099,8092,8074,8043,8035,7070,9001,7001,4443 -anew sub.ips.httpx --rm-logs
+    axiom-scan sub.ips.dnsx -m httpx -threads 300 -rl 200 -anew sub.ips.httpx --rm-logs
     rm sub.ips.dnsx && mv sub.ips.httpx checks/ips/
 }
 
@@ -81,6 +98,7 @@ run_waymore() {
 
 run_crawling() {
     timeout --foreground 6700 axiom-scan "$FILE" -m waybackurls --rm-logs -anew gau.txt
+    cat "$FILE" | gau --threads 16 --providers wayback,commoncrawl,otx,urlscan --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot | anew gau.txt
     grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" gau.txt | sort -u > temp && mv temp gau.txt
     sed 's|^|http://|' "$FILE" > crawl.txt
 
@@ -118,7 +136,7 @@ run_katana() {
     timeout --foreground 3700 axiom-scan crawl.txt -m katana -jsluice -kf all -pss waybackarchive,commoncrawl,alienvault -passive -jc $headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
     cat vkatana.txt | anew hakrawler.txt && rm vkatana.txt
 
-    timeout --foreground 3700 axiom-scan crawl.txt -m katana $active_headers -jc -rl 180 -s breadth-first -jsluice -kf all -aff --rm-logs -anew akatana.txt
+    timeout --foreground 3700 axiom-scan crawl.txt -m katana $active_headers -jc -d 10 -s breadth-first -jsluice -aff --rm-logs -anew akatana.txt
     cat akatana.txt | anew hakrawler.txt && cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
     cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
     rm crawl.txt gau.txt hakrawler.txt akatana.txt
@@ -156,6 +174,8 @@ if $ALL; then
 elif $SUBS; then
     run_subdomain_enumeration
     run_probing
+elif $MASS_DNS; then
+    run_dns_mass
 elif $IP; then
     run_sub_portscan
 elif $CRAWL; then
@@ -169,5 +189,4 @@ else
     exit 1
 fi
 
-# Cleanup
-rm -rf sub.txt uri.txt techs.txt
+rm -rf sub.txt
