@@ -69,7 +69,6 @@ run_dns_mass() {
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     shosubgo -f "$FILE" -s "$SHODAN_API_KEY" | anew sub.txt
     axiom-scan "$FILE" -m findomain --external-subdomains -r -anew temp && mv temp sub.txt
-    cat sub.txt | dnsgen - > temp && mv temp sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
     run_probing
 }
@@ -78,7 +77,7 @@ run_probing() {
     axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > /home/op/lists/resolvers.txt"
     axiom-scan sub.txt -m dnsx -threads 300 -o dnsx.txt --rm-logs
     axiom-scan dnsx.txt -m httpx -threads 300 -rl 250 -random-agent -title -td -probe -sc -ct -server -anew techs.txt --rm-logs
-    cat techs.txt | grep -v "FAILED" | awk '{print $1}' > subdomains/alive.txt && mv techs.txt subdomains/
+    cat techs.txt | grep -v "FAILED" | awk '{print $1}' > subdomains/alive.txt && cat subdomains/alive.txt | grep 200 > subdomains/200.txt && mv techs.txt subdomains/
     rm sub.txt
 }
 
@@ -116,7 +115,7 @@ run_advanced_crawling() {
                                       -e 's/^\[upload-form\] - //g' \
                                       -e 's/^\[aws-s3\] - //g' \
                                       -e 's/[[:space:]]*$//g' \
-                                      -e '/^$/d' | sort -u > cleaned_output.txt
+                                      -e '/^$/d' | grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" | sort -u > cleaned_output.txt
     rm -rf out/
 
     run_hakrawler
@@ -126,6 +125,13 @@ run_hakrawler() {
     timeout --foreground 3700 axiom-scan crawl.txt -m hakrawler -anew hakrawler.txt --rm-logs
     cat cleaned_output.txt | anew hakrawler.txt && rm cleaned_output.txt
 
+    run_advanced_crawling2
+}
+
+run_advanced_crawling2() {
+    timeout --foreground 5000 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs
+
+    cat plus | anew hakrawler.txt && rm plus
     run_katana
 }
 
