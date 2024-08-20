@@ -57,10 +57,11 @@ done
 
 run_subdomain_enumeration() {
     axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
-    axiom-scan sub.txt -m subfinder -all -silent -recursive --rm-logs -anew temp && cat temp | anew sub.txt && rm temp
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     shosubgo -f "$FILE" -s "$SHODAN_API_KEY" | anew sub.txt
+    axiom-scan "$FILE" -m findomain --external-subdomains -r -anew temp && mv temp sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
+    run_probing
 }
 
 run_dns_mass() {
@@ -69,7 +70,7 @@ run_dns_mass() {
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     shosubgo -f "$FILE" -s "$SHODAN_API_KEY" | anew sub.txt
     axiom-scan "$FILE" -m findomain --external-subdomains -r -anew temp && mv temp sub.txt
-    cat sub.txt | sort -u > temp && mv temp sub.txt
+    cat sub.txt | dnsgen - | sort -u > temp && mv temp sub.txt
     run_probing
 }
 
@@ -77,7 +78,7 @@ run_probing() {
     axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > /home/op/lists/resolvers.txt"
     axiom-scan sub.txt -m dnsx -threads 300 -o dnsx.txt --rm-logs
     axiom-scan dnsx.txt -m httpx -threads 300 -rl 250 -random-agent -title -td -probe -sc -ct -server -anew techs.txt --rm-logs
-    cat techs.txt | grep -v "FAILED" | awk '{print $1}' > subdomains/alive.txt && cat subdomains/alive.txt | grep 200 > subdomains/200.txt && mv techs.txt subdomains/
+    cat techs.txt | grep -v "FAILED" | awk '{print $1}' > subdomains/alive.txt && mv techs.txt subdomains/
     rm sub.txt
 }
 
@@ -106,7 +107,7 @@ run_crawling() {
 
 run_advanced_crawling() {
     timeout --foreground 5000 axiom-scan crawl.txt -m gospider -o out --rm-logs
-    find out/ -type f -exec cat {} + | sed -e 's/^\[linkfinder\] - //g' \
+    find plus/ -type f -exec cat {} + | sed -e 's/^\[linkfinder\] - //g' \
                                       -e 's/^\[url\] - \[code-[0-9]\{3\}\] - //g' \
                                       -e 's/^\[href\] - //g' \
                                       -e 's/^\[subdomains\] - //g' \
@@ -129,7 +130,7 @@ run_hakrawler() {
 }
 
 run_advanced_crawling2() {
-    timeout --foreground 5000 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs
+    timeout --foreground 4800 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs
 
     cat plus | anew hakrawler.txt && rm plus
     run_katana
@@ -137,12 +138,13 @@ run_advanced_crawling2() {
 
 run_katana() {
     local headers='-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.171 Safari/537.36"'
-    local active_headers='-H "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 OPR/110.0.0.0 (Edition Yx 05)"'
+    #local active_headers='-H "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 OPR/110.0.0.0 (Edition Yx 05)"'
 
     timeout --foreground 3700 axiom-scan crawl.txt -m katana -jsluice -kf all -pss waybackarchive,commoncrawl,alienvault -passive -jc $headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
     cat vkatana.txt | anew hakrawler.txt && rm vkatana.txt
 
-    timeout --foreground 3700 axiom-scan crawl.txt -m katana $active_headers -jc -d 10 -s breadth-first -jsluice -aff --rm-logs -anew akatana.txt
+    #timeout --foreground 3700 axiom-scan crawl.txt -m katana $active_headers -jc -d 10 -s breadth-first -jsluice -aff --rm-logs -anew akatana.txt
+    timeout --foreground 3200 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs && cat plus | anew akatana.txt && rm plus
     cat akatana.txt | anew hakrawler.txt && cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
     cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
     rm crawl.txt gau.txt hakrawler.txt akatana.txt
@@ -174,12 +176,10 @@ run_checks() {
 
 if $ALL; then
     run_subdomain_enumeration
-    run_probing
     run_waymore
     run_checks
 elif $SUBS; then
     run_subdomain_enumeration
-    run_probing
 elif $MASS_DNS; then
     run_dns_mass
 elif $IP; then
