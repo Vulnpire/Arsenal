@@ -12,6 +12,7 @@ CRAWL=false
 WAYMORE=false
 CHECK=false
 ALL=false
+DOMAIN=false
 
 # Parse the arguments
 while [[ "$#" -gt 0 ]]; do
@@ -44,6 +45,10 @@ while [[ "$#" -gt 0 ]]; do
             CHECK=true
             shift
             ;;
+        -domain)
+            DOMAIN=true
+            shift
+            ;;
         -all)
             ALL=true
             shift
@@ -70,7 +75,7 @@ run_dns_mass() {
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     shosubgo -f "$FILE" -s "$SHODAN_API_KEY" | anew sub.txt
     axiom-scan "$FILE" -m findomain --external-subdomains -r -anew temp && mv temp sub.txt
-    cat sub.txt | dnsgen - | sort -u > temp && mv temp sub.txt
+    cat sub.txt | sort -u > temp && mv temp sub.txt
     run_probing
 }
 
@@ -98,7 +103,7 @@ run_waymore() {
 
 run_crawling() {
     timeout --foreground 6700 axiom-scan "$FILE" -m waybackurls --rm-logs -anew gau.txt
-    cat "$FILE" | gau --threads 16 --providers wayback,commoncrawl,otx,urlscan --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot | anew gau.txt
+    cat "$FILE" | gau --threads 16 --subs --providers wayback,commoncrawl,otx,urlscan --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot | anew gau.txt
     grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" gau.txt | sort -u > temp && mv temp gau.txt
     sed 's|^|http://|' "$FILE" > crawl.txt
 
@@ -106,7 +111,7 @@ run_crawling() {
 }
 
 run_advanced_crawling() {
-    timeout --foreground 5000 axiom-scan crawl.txt -m gospider -o out --rm-logs
+    timeout --foreground 5000 axiom-scan crawl.txt -m gospider --subs --include-subs -o out --rm-logs
     find plus/ -type f -exec cat {} + | sed -e 's/^\[linkfinder\] - //g' \
                                       -e 's/^\[url\] - \[code-[0-9]\{3\}\] - //g' \
                                       -e 's/^\[href\] - //g' \
@@ -123,14 +128,14 @@ run_advanced_crawling() {
 }
 
 run_hakrawler() {
-    timeout --foreground 3700 axiom-scan crawl.txt -m hakrawler -anew hakrawler.txt --rm-logs
+    timeout --foreground 3700 axiom-scan crawl.txt -m hakrawler -subs -anew hakrawler.txt --rm-logs
     cat cleaned_output.txt | anew hakrawler.txt && rm cleaned_output.txt
 
     run_advanced_crawling2
 }
 
 run_advanced_crawling2() {
-    timeout --foreground 4800 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs
+    timeout --foreground 4800 axiom-scan hakrawler.txt -m hakrawler -subs -o plus --rm-logs
 
     cat plus | anew hakrawler.txt && rm plus
     run_katana
@@ -144,11 +149,52 @@ run_katana() {
     cat vkatana.txt | anew hakrawler.txt && rm vkatana.txt
 
     #timeout --foreground 3700 axiom-scan crawl.txt -m katana $active_headers -jc -d 10 -s breadth-first -jsluice -aff --rm-logs -anew akatana.txt
+    timeout --foreground 3200 axiom-scan hakrawler.txt -m hakrawler -subs -o plus --rm-logs && cat plus | anew akatana.txt && rm plus
+    cat akatana.txt | anew hakrawler.txt && cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
+    cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
+    rm crawl.txt gau.txt hakrawler.txt akatana.txt
+    mv uri.txt crawl/
+}
+
+run_only_domain() {
+    timeout --foreground 6700 axiom-scan "$FILE" -m waymore -p 4 -mc 200 -mode U --rm-logs -anew gau.txt
+    timeout --foreground 6700 axiom-scan "$FILE" -m waybackurls --rm-logs -anew gau.txt
+    cat "$FILE" | gau --threads 16 --providers wayback,commoncrawl,otx,urlscan --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot | anew gau.txt
+    grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" gau.txt | sort -u > temp && mv temp gau.txt
+    sed 's|^|http://|' "$FILE" > crawl.txt
+
+    timeout --foreground 5000 axiom-scan crawl.txt -m gospider -o out --rm-logs
+    find plus/ -type f -exec cat {} + | sed -e 's/^\[linkfinder\] - //g' \
+                                      -e 's/^\[url\] - \[code-[0-9]\{3\}\] - //g' \
+                                      -e 's/^\[href\] - //g' \
+                                      -e 's/^\[subdomains\] - //g' \
+                                      -e 's/^\[javascript\] - //g' \
+                                      -e 's/^\[form\] - //g' \
+                                      -e 's/^\[upload-form\] - //g' \
+                                      -e 's/^\[aws-s3\] - //g' \
+                                      -e 's/[[:space:]]*$//g' \
+                                      -e '/^$/d' | grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" | sort -u > cleaned_output.txt
+    rm -rf out/
+
+    timeout --foreground 3700 axiom-scan crawl.txt -m hakrawler -anew hakrawler.txt --rm-logs
+    cat cleaned_output.txt | anew hakrawler.txt && rm cleaned_output.txt
+
+    timeout --foreground 4800 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs
+
+    cat plus | anew hakrawler.txt && rm plus
+
+    local dom_headers='-H "User-Agent: Mozilla/5.0 (Linux; Android 11; DT2002C; Build/RKQ1.201217.002) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.4280.141 Mobile Safari/537.36 Firefox-KiToBrowser/124.0"'
+    
+    timeout --foreground 3700 axiom-scan crawl.txt -m katana -jsluice -kf all -fs dn -pss waybackarchive,commoncrawl,alienvault -passive -jc $dom_headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
+    cat vkatana.txt | anew hakrawler.txt && rm vkatana.txt
+
     timeout --foreground 3200 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs && cat plus | anew akatana.txt && rm plus
     cat akatana.txt | anew hakrawler.txt && cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
     cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
     rm crawl.txt gau.txt hakrawler.txt akatana.txt
     mv uri.txt crawl/
+
+    run_checks
 }
 
 run_checks() {
@@ -190,8 +236,10 @@ elif $WAYMORE; then
     run_waymore
 elif $CHECK; then
     run_checks
+elif $DOMAIN; then
+    run_only_domain
 else
-    echo "Usage: $0 [-f file] [-subs] [-ip] [-crawl] [-waymore] [-check] [-all]"
+    echo "Usage: $0 [-f file] [-subs] [-ip] [-crawl] [-waymore] [-check] [-all] [-domain]"
     exit 1
 fi
 
