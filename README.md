@@ -74,7 +74,7 @@ OR
 
 ## IDOR Prone Endpoints & Params
 
-`cat uri.txt | sort -u | grep -Ei '\?invoice=|changepassword\?user=|showImage|accessPage\?menuitem=|user_id=|MyPictureList=|profile_id=|account_id=|order_id=|page_id=|product_id=|session_id=|invoice_id=|doc_id='`
+`cat uri.txt | sort -u | grep -Ei '(user|order|product|api|invoice|account|profile)/[0-9]+|[a-fA-F0-9-]{36}|\?invoice=|changepassword\?user=|showImage|accessPage\?menuitem=|user_id=|file_id=|MyPictureList=|profile_id=|account_id=|order_id=|page_id=|product_id=|session_id=|invoice_id=|doc_id='`
 
 ## Regex for XXE
 
