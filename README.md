@@ -4,11 +4,11 @@
 
 ```cat domains.txt | sXtract -ip``` [link](https://github.com/Vulnpire/shodanXtract).
 
-* OR
+OR
 
 ```curl -s "https://www.shodan.io/search/facet?query=ssl.cert.subject.cn%3A%22target.com%22&facet=ip" | grep -oP '(?<=<strong>)[^<]+(?=</strong>)' | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | anew ips.txt```
 
-* OR
+OR
 
 ```var ipElements=document.querySelectorAll('strong');var ips=[];ipElements.forEach(function(e){ips.push(e.innerHTML.replace(/["']/g,''))});var ipsString=ips.join('\n');var a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(ipsString);a.download='ips.txt';document.body.appendChild(a);a.click();```
 
@@ -38,11 +38,11 @@
 
 ## SQLI Prone Params
 
-`cat uri.txt | uro | sort -u | grep -Ei '\?(id|param)='`
+`cat uri.txt | uro | sort -u | grep -Ei '\?(id|param|order_id|cat_id|form|form_id|sid|cat|category|pid|action)='`
 
 ## XSS Prone Params
 
-`cat uri.txt | uro | sort -u | grep -Ei '\?(name|query|search|keyword|username|email|message|comment|body|input|value|arg|data|q)='`
+`cat uri.txt | uro | sort -u | grep -Ei '\?(name|query|search|keyword|username|email|message|comment|body|input|value|arg|data|q|param|lang|s)='`
 
 ## Open Redirect Prone Params
 
@@ -54,11 +54,11 @@
 
 ## Common backup, logs, and configuration files, vulnerable endpoints
 
-`cat uri.txt | uro | sort -u | sort -u | grep -Ei '(\.git|\.env|\.bak|\.old|\.log|\.conf|\.config|\.ini|\.sql|\.dump|xmlrpc\.php|_fragment|env\.js|\.gitlab-ci\.yml)'`
+`cat uri.txt | uro | sort -u | sort -u | grep -Ei '(\.git|\.svn|\.backup|\.env|\.bak|\.old|\.log|\.conf|\.config|\.ini|\.sql|\.dump|xmlrpc\.php|_fragment|env\.js|\.gitlab-ci\.yml|\.cgf|\.xml|\.xls|\.xlsx|\.json|\.war|\.ear|\.sqlitedb|\.sqlite3|\.properties|\.pem|\.key|tar\.gz|.\py|\.sh)$'`
 
 ## Common patterns for file inclusion and directory traversal
 
-`cat uri.txt | uro | sort -u | grep -Ei '\?(file|page|path|doc|folder|dir)='`
+`cat uri.txt | uro | sort -u | grep -Ei '\?(file|page|path|doc|folder|dir|inc|locate|conf)='`
 
 ## Common parameters for session management
 
@@ -70,11 +70,19 @@
 
 ## Regex for API Enumeration
 
-`cat uri.txt | sort -u | grep -Ei '/api/v1/[a-z]+/[0-9]+|/api/v2/[a-z]+/[0-9]+|/api/v3/[a-z]+/[0-9]+'`
+`cat uri.txt | sort -u | grep -Ei '/api/v[1-3]/[a-z]+/[0-9]+|/api/[0-9]+/[a-z]+/[0-9]+|/v[0-9]+/[a-z]+/[0-9]+|/rest(/v[0-9]+)?/|/graphql|/swagger|/auth|/internal/create/get/post|'`
 
 ## IDOR Prone Endpoints & Params
 
-`uri.txt | sort -u | grep -Ei '\?invoice=|changepassword\?user=|showImage|accessPage\?menuitem=|user_id=|MyPictureList=|profile_id=|account_id=|order_id=|page_id=|product_id=|session_id=|invoice_id=|doc_id='`
+`cat uri.txt | sort -u | grep -Ei '\?invoice=|changepassword\?user=|showImage|accessPage\?menuitem=|user_id=|MyPictureList=|profile_id=|account_id=|order_id=|page_id=|product_id=|session_id=|invoice_id=|doc_id='`
+
+## Regex for XXE
+
+`cat uri.txt | sort -u | grep -Ei "(xml|data|content|file|input|entity|config|document|payload|request)="`
+
+## Regex for SSTI
+
+`cat uri.txt | sort -u | grep -Ei "(template|name|message|user|description|email|subject|content|query|title)="`
 
 ## Fast Nmap Scan
 
