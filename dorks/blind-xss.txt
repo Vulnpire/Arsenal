@@ -1,0 +1,4 @@
+(inurl:"/contact-us" | intitle:"contact us" inurl:"contact")
+(inurl:"/support/contact" | inurl:"/helpdesk" | inurl:"/customer-reviews")
+(inurl:"/submit-form" | inurl:"/admin/submit")
+(inurl:"/careers/apply" | inurl:"/job-application" | inurl:"/apply-now")
