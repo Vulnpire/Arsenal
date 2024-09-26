@@ -1,0 +1,6 @@
+(inurl:forgot-password | inurl:reset-password)
+(inurl:forgot-password "enter your email" | "enter your username")    
+(inurl:/mfa | inurl:/2fa | intitle:"Multi-Factor Authentication Setup")
+(inurl:forgot-password "security question" | "answer your security question")
+(inurl:reset-password "verify your phone" | "verify your email")
+(inurl:login | intitle:login "Choose your MFA method")
