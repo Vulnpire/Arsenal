@@ -61,11 +61,14 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 run_subdomain_enumeration() {
-    axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
+    axiom-scan "$FILE" -m subfinder -all -silent --rm-logs -anew sub.txt
+    #axiom-scan "$FILE" -m subdominator -o subd.txt
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
-    shosubgo -f "$FILE" -s "$SHODAN_API_KEY" | anew sub.txt
-    axiom-scan "$FILE" -m findomain --external-subdomains -r -anew temp --rm-logs && cat temp | anew sub.txt
+    axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
+    axiom-scan "$FILE" -m chaos -anew sub.txt && cat chaos.txt | sed 's/^\*\.//' | anew subs.txt && rm chaos.txt
+    timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp --rm-logs && cat temp | anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
+    grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
     run_probing
 }
 
@@ -73,18 +76,19 @@ run_dns_mass() {
     axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
     axiom-scan sub.txt -m subfinder -all -silent -recursive --rm-logs -anew temp && cat temp | anew sub.txt && rm temp
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
-    shosubgo -f "$FILE" -s "$SHODAN_API_KEY" | anew sub.txt
-    axiom-scan "$FILE" -m findomain --external-subdomains -r -anew temp && mv temp sub.txt
+    axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew subs.txt && rm chaos.txt
+    axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
+    timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && mv temp sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
+    grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
     run_probing
 }
 
 run_probing() {
-    axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > /home/op/lists/resolvers.txt"
     axiom-scan sub.txt -m dnsx -threads 300 -o dnsx.txt --rm-logs
-    axiom-scan dnsx.txt -m httpx -threads 300 -rl 250 -random-agent -title -td -probe -sc -ct -server -anew techs.txt --rm-logs
+    axiom-scan dnsx.txt -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -sc -ct -server -anew techs.txt --rm-logs
     mv techs.txt subdomains/
-    rm sub.txt
+    mv sub.txt subdomains/
 }
 
 run_sub_portscan() {
@@ -128,15 +132,14 @@ run_advanced_crawling() {
 }
 
 run_hakrawler() {
-    timeout --foreground 3700 axiom-scan crawl.txt -m hakrawler -subs -anew hakrawler.txt --rm-logs
+    timeout --foreground 3700 axiom-scan crawl.txt -m wraith -subs -crawl-js -anew hakrawler.txt --rm-logs
     cat cleaned_output.txt | anew hakrawler.txt && rm cleaned_output.txt
 
     run_advanced_crawling2
 }
 
 run_advanced_crawling2() {
-    timeout --foreground 4800 axiom-scan hakrawler.txt -m hakrawler -subs -o plus --rm-logs
-
+    timeout --foreground 4800 axiom-scan hakrawler.txt -m wraith -crawl-js -subs -o plus --rm-logs
     cat plus | anew hakrawler.txt && rm plus
     run_katana
 }
@@ -147,11 +150,11 @@ run_katana() {
     timeout --foreground 3700 axiom-scan crawl.txt -m katana -jsluice -kf all -pss waybackarchive,commoncrawl,alienvault -passive -jc $headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
     cat vkatana.txt | anew hakrawler.txt && rm vkatana.txt
 
-    timeout --foreground 3200 axiom-scan hakrawler.txt -m hakrawler -subs -o plus --rm-logs && cat plus | anew hakrawler.txt && rm plus
+    timeout --foreground 3200 axiom-scan hakrawler.txt -m wraith -crawl-js -subs -o plus --rm-logs && cat plus | anew hakrawler.txt && rm plus
     cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
     cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
     rm crawl.txt gau.txt hakrawler.txt
-    mv uri.txt crawl/
+    mv uri.txt crawl/uri.txt
 
     timeout --foreground 3300 axiom-scan crawl/uri.txt -m gospider --subs --include-subs -o plus --rm-logs
 
@@ -168,7 +171,7 @@ run_katana() {
     rm -rf plus/
     cat cleaned_output.txt | anew crawl/uri.txt && rm cleaned_output.txt
     grep -E "$(paste -sd '|' wildcards.txt)" crawl/uri.txt > temp && mv temp crawl/uri.txt
-    cat crawl/uri.txt | grep -Ei "\.js$" > crawl/js.urls
+    # cat crawl/uri.txt | grep -Ei "\.js$" > crawl/js.urls
 }
 
 run_only_domain() {
@@ -190,10 +193,10 @@ run_only_domain() {
                                       -e '/^$/d' | grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" | sort -u > cleaned_output.txt
     rm -rf out/
 
-    timeout --foreground 3700 axiom-scan crawl.txt -m hakrawler -anew hakrawler.txt --rm-logs
+    timeout --foreground 3700 axiom-scan crawl.txt -m wraith -anew hakrawler.txt --rm-logs
     cat cleaned_output.txt | anew hakrawler.txt && rm cleaned_output.txt
 
-    timeout --foreground 4800 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs
+    timeout --foreground 4800 axiom-scan hakrawler.txt -m wraith -o plus --rm-logs
 
     cat plus | anew hakrawler.txt && rm plus
 
@@ -202,15 +205,15 @@ run_only_domain() {
     timeout --foreground 3700 axiom-scan crawl.txt -m katana -jsluice -kf all -fs dn -pss waybackarchive,commoncrawl,alienvault -passive -jc $dom_headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
     cat vkatana.txt | anew hakrawler.txt && rm vkatana.txt
 
-    timeout --foreground 3200 axiom-scan hakrawler.txt -m hakrawler -o plus --rm-logs && cat plus | anew akatana.txt && rm plus
+    timeout --foreground 3200 axiom-scan hakrawler.txt -m wraith -o plus --rm-logs && cat plus | anew akatana.txt && rm plus
     cat akatana.txt | anew hakrawler.txt && cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
     cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
-    rm crawl.txt gau.txt hakrawler.txt akatana.txt
     grep -E "$(paste -sd '|' wildcards.txt)" uri.txt > temp && mv temp uri.txt
     mv uri.txt crawl/
     cat crawl/uri.txt | grep -Ei "\.js$" > crawl/js.urls
 
     run_checks
+    rm -f crawl.txt gau.txt hakrawler.txt akatana.txt
 }
 
 run_checks() {
