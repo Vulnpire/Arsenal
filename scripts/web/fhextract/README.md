@@ -14,6 +14,10 @@ A Python script that fetches the favicon from a list of URLs, computes its mmh3 
 - Requests module: `pip3 install requests`
 - mmh3 module: `pip3 install mmh3`
 
+## Installation
+
+
+
 ## Usage
 
 1. **Make the script executable**:

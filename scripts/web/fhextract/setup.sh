@@ -1,0 +1,1 @@
+curl -s https://raw.githubusercontent.com/Vulnpire/Arsenal/refs/heads/main/scripts/web/fhextract/fhextract.py > /tmp/fhextract.py && chmod +x /tmp/fhextract.py && sudo mv /tmp/fhextract.py /usr/local/bin/
