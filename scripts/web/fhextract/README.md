@@ -16,7 +16,7 @@ A Python script that fetches the favicon from a list of URLs, computes its mmh3 
 
 ## Installation
 
-
+bash <(curl -s https://raw.githubusercontent.com/Vulnpire/Arsenal/refs/heads/main/scripts/web/fhextract/setup.sh)
 
 ## Usage
 
