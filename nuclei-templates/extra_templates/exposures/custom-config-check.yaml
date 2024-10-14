@@ -1,0 +1,46 @@
+id: custom-config-check
+
+info:
+  name: Database Configuration File Exposure
+  author: SirBugs,Vulnpire
+  severity: critical
+  description: |
+    This template checks for exposed database configuration files (parameters.yml) that may contain sensitive information such as database credentials, host, and driver details. Exposing these files can lead to unauthorized database access and potential data breaches.
+  tags: config, database, sensitive-info, credential-leak
+
+requests:
+  - method: GET
+    path:
+      - "{{BaseURL}}/config/parameters.yml"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "database_driver"
+        matcher-name: database-driver-check
+
+      - type: word
+        part: body
+        words:
+          - "database_host"
+        matcher-name: database-host-check
+
+      - type: word
+        part: body
+        words:
+          - "database_port"
+        matcher-name: database-port-check
+
+      - type: word
+        part: body
+        words:
+          - "database_name"
+        matcher-name: database-name-check
+
+      - type: word
+        part: body
+        words:
+          - "database_password"
+        matcher-name: database-password-check

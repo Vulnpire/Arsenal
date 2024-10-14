@@ -1,0 +1,44 @@
+id: fuzz-open-redirect
+
+info:
+  name: Open Redirect Detection
+  author: princechaddha,otterly,Vulnpire
+  severity: medium
+  tags: redirect,dast
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    payloads:
+      redirect:
+        - "google.com"
+
+    fuzzing:
+      - part: query
+        type: replace
+        mode: single
+        fuzz:
+          - "http://{{redirect}}"
+          - "https://{{redirect}}"
+          - "//{{redirect}}"
+          - "/\\{{redirect}}"
+
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - '(?i)^location\s*:\s*(https?:\/\/|\/\/)?(www\.)?google\.com\/?'
+
+      - type: status
+        status:
+          - 301
+          - 302
+          - 303
+          - 304
+          - 305
+          - 306
+          - 307
