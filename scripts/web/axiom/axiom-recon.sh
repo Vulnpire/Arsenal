@@ -68,6 +68,7 @@ run_subdomain_enumeration() {
     axiom-scan "$FILE" -m chaos -anew sub.txt && cat chaos.txt | sed 's/^\*\.//' | anew subs.txt && rm chaos.txt
     timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp --rm-logs && cat temp | anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
+    axiom-scan "$FILE" -m asnrecon -anew sub.txt
     grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
     run_probing
 }
@@ -79,6 +80,7 @@ run_dns_mass() {
     axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew subs.txt && rm chaos.txt
     axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
     timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && mv temp sub.txt
+    axiom-scan "$FILE" -m asnrecon -anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
     grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
     run_probing
@@ -153,7 +155,6 @@ run_katana() {
     timeout --foreground 3200 axiom-scan hakrawler.txt -m wraith -crawl-js -subs -o plus --rm-logs && cat plus | anew hakrawler.txt && rm plus
     cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
     cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
-    rm crawl.txt gau.txt hakrawler.txt
     mv uri.txt crawl/uri.txt
 
     timeout --foreground 3300 axiom-scan crawl/uri.txt -m gospider --subs --include-subs -o plus --rm-logs
@@ -172,6 +173,7 @@ run_katana() {
     cat cleaned_output.txt | anew crawl/uri.txt && rm cleaned_output.txt
     grep -E "$(paste -sd '|' wildcards.txt)" crawl/uri.txt > temp && mv temp crawl/uri.txt
     # cat crawl/uri.txt | grep -Ei "\.js$" > crawl/js.urls
+    rm crawl.txt gau.txt hakrawler.txt
 }
 
 run_only_domain() {
@@ -236,7 +238,7 @@ run_checks() {
         grep -Ei "${checks[$check]}" "$uri_file" > "checks/$check/check.txt"
     done
 
-    rm $uri_file
+    # rm $uri_file
 }
 
 if $ALL; then
