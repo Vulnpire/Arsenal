@@ -8,3 +8,7 @@
 - **Input from Standard Input**: Accepts multiple URLs via standard input, making it easy to use with files or other command outputs.
 - **Sequential Scanning**: Runs scans one after another, allowing you to monitor progress in real-time.
 - **Automatic WPScan Update**: Updates WPScan to the latest version before scanning begins.
+
+## Setup
+
+`bash <(curl -s https://raw.githubusercontent.com/Vulnpire/Arsenal/refs/heads/main/scripts/web/wpsrapper/setup.sh)`
