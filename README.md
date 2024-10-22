@@ -1,17 +1,5 @@
 # Arsenal
 
-## Get All IPs from Shodan
-
-```cat domains.txt | sXtract -ip``` [link](https://github.com/Vulnpire/shodanXtract).
-
-OR
-
-```curl -s "https://www.shodan.io/search/facet?query=ssl.cert.subject.cn%3A%22target.com%22&facet=ip" | grep -oP '(?<=<strong>)[^<]+(?=</strong>)' | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | anew ips.txt```
-
-OR
-
-```var ipElements=document.querySelectorAll('strong');var ips=[];ipElements.forEach(function(e){ips.push(e.innerHTML.replace(/["']/g,''))});var ipsString=ips.join('\n');var a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(ipsString);a.download='ips.txt';document.body.appendChild(a);a.click();```
-
 ## Uncover
 
 ```uncover -silent -s 'ssl.cert.subject.CN:"target.com" -http.title:"Invalid URL" -http.title:"ERROR: The request could not be satisfied"' | sort -u```
