@@ -165,6 +165,89 @@
 
 ---
 
+## 11. Open Redirects
+
+**Risk:** Open redirects can allow attackers to redirect users to malicious sites, enabling phishing attacks.
+
+**How to Test:**
+- Identify endpoints with redirect functionality (e.g., `next` or `url` parameters).
+- Test by injecting external URLs like `http://malicious-site.com`.
+
+**Example:**
+- Access a URL like `http://target-site.com/redirect?next=http://malicious-site.com`. If you are redirected to the malicious site, the application is vulnerable.
+
+**Remediation:**
+- Validate and sanitize redirect URLs, ensuring they point only to trusted domains.
+
+---
+
+## 12. Insufficient Session Expiration
+
+**Risk:** Sessions that do not expire appropriately can allow unauthorized access if a session token is stolen.
+
+**How to Test:**
+- Check session expiration settings in cookies.
+- Test if a session remains valid after logout or inactivity.
+
+**Example:**
+- Log in to the application, copy the session token, log out, and reuse the token to access the application.
+
+**Remediation:**
+- Set appropriate session expiration times and ensure tokens are invalidated on logout.
+
+---
+
+## 13. Rate Limiting Issues
+
+**Risk:** Lack of rate limiting can lead to brute-force attacks or abuse of endpoints.
+
+**How to Test:**
+- Use tools like Burp Suite or Hydra to send multiple requests to login or API endpoints.
+- Check for account lockouts or error responses after repeated attempts.
+
+**Example:**
+- Attempt 100 login requests with different passwords for the same username. If there is no lockout or delay, the application is vulnerable.
+
+**Remediation:**
+- Implement rate limiting using Django’s `axes` or third-party libraries.
+
+---
+
+## 14. Weak Password Policies
+
+**Risk:** Weak password policies can allow users to set easily guessable passwords.
+
+**How to Test:**
+- Register or update an account with a weak password like `password123` or `12345678`.
+
+**Example:**
+- If the application accepts weak passwords, it is vulnerable to credential stuffing.
+
+**Remediation:**
+- Enforce strong password policies using Django’s `AUTH_PASSWORD_VALIDATORS`.
+
+---
+
+## 15. Exposure of API Endpoints
+
+**Risk:** Unprotected or undocumented API endpoints can expose sensitive functionality.
+
+**How to Test:**
+- Use tools like Burp Suite or Postman to enumerate API endpoints.
+- Check for endpoints that bypass authentication or perform sensitive operations.
+
+**Example:**
+- Access an endpoint like `/api/delete-user/` without authentication. If the operation succeeds, the endpoint is vulnerable.
+
+**Remediation:**
+- Document all API endpoints and ensure proper authentication and authorization.
+
+---
+
+## 16. Insecure Caching
+
+**Risk:** Sensitive data stored in caches can be exposed to unauthorized users.
+
 ## Tools to Use
 
 - **Burp Suite:** For request interception and vulnerability testing.
@@ -174,4 +257,3 @@
 
 ---
 
-Securing Django applications involves a combination of following best practices, leveraging its built-in security features, and avoiding common developer pitfalls. This checklist not only helps bug bounty hunters but also serves as a guide for developers to secure their applications. By addressing these vulnerabilities, you can ensure a more robust and secure Django deployment.
