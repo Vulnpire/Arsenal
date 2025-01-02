@@ -81,16 +81,20 @@ run_dns_mass() {
     axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
     axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
     timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && mv temp sub.txt
+    axiom-scan wildcards.txt -m subgen -o subgen.txt && cat subgen.txt | anew sub.txt && rm subgen.txt
     axiom-scan "$FILE" -m asnrecon -anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
     grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
     run_probing
 }
 
+# -ports 80,443,3000,5000,7000,8001,8000,8090,9000,10000,10001,8080
+
 run_probing() {
-    axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt | anew ~/lists/resolvers.txt"
+    axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > ~/lists/resolvers.txt"
     axiom-scan sub.txt -m dnsx -threads 300 -o dnsx.txt --rm-logs
-    axiom-scan dnsx.txt -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports 80,443,3000,5000,7000,8001,8000,8090,9000,10000,10001,8080 -sc -ct -server -anew techs.txt --rm-logs
+    # axiom-scan dnsx.txt -m naabu --top-ports 100 -o dns && mv dns dnsx.txt
+    axiom-scan dnsx.txt -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports 80,443,3000,5000,7000,8001,8000,8090,9000,9001,10000,10001,8080 -sc -ct -server -anew techs.txt --rm-logs
     cat techs.txt | grep -vi failed | anew subdomains/techs.txt
     mv sub.txt subdomains/
 }
