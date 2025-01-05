@@ -7,6 +7,8 @@ fi
 
 input=$(cat)
 
+exclude_patterns="cloudflare|akamai|imperva|fastly|sucuri|incapsula|stackpath|cdn77|maxcdn|keycdn|bunnycdn|verizon edgecast|limelight|cachefly|cloudfront|google cloud cdn"
+
 declare -A cms_patterns=(
   ["wordpress"]="\\bwordpress\\b|\\bwp\\b|wp engine|powered by wordpress"
   ["jira"]="\\bjira\\b|\\bconfluence\\b|\\batlassian\\b|bitbucket|bamboo"
@@ -37,9 +39,13 @@ declare -A cms_patterns=(
   ["monitoring"]="prometheus|grafana|zabbix|splunk|datadog|new relic|appdynamics|kibana|elk stack|fluentd|graylog"
 )
 
+filtered_input=$(echo "$input" | grep -Evi "$exclude_patterns")
+
 for category in "${!cms_patterns[@]}"; do
   matches=$(echo "$input" | grep -Ei "${cms_patterns[$category]}")
   if [ -n "$matches" ]; then
     echo "$matches" | notify -id "$category" -bulk -d 4 -silent
   fi
 done
+
+echo "$input" | grep -Ei "$exclude_patterns" | notify -id "no-waf" -bulk -d 4 -silent
