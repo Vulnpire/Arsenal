@@ -1,0 +1,1 @@
+`curl -s https://raw.githubusercontent.com/Vulnpire/Arsenal/refs/heads/c2/scripts/web/axiom/sXtract/sXtract.sh > /tmp/sXtract.sh; chmod +x /tmp/sXtract.sh; mv /tmp/sXtract.sh /usr/local/bin/sXtract.sh`
