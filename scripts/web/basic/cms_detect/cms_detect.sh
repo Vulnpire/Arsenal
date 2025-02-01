@@ -48,4 +48,4 @@ for category in "${!cms_patterns[@]}"; do
   fi
 done
 
-echo "$input" | grep -Ei "$exclude_patterns" | notify -id "no-waf" -bulk -d 4 -silent
+echo "$input" | grep -Evi "$exclude_patterns" | notify -id "no-waf" -bulk -d 4 -silent
