@@ -62,7 +62,7 @@ done
 
 run_subdomain_enumeration() {
     axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
-    #axiom-scan "$FILE" -m subdominator -o subd.txt
+    # axiom-scan "$FILE" -m subdominator -o subd.txt
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
     axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
@@ -76,11 +76,11 @@ run_subdomain_enumeration() {
 run_dns_mass() {
     axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
     axiom-scan sub.txt -m subfinder -all -silent -recursive --rm-logs -anew temp && cat temp | anew sub.txt && rm temp
-    axiom-scan wildcards.txt -m puredns-bruteforce -anew sub.txt
+    axiom-scan "$FILE" -m puredns-bruteforce -anew sub.txt
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
     axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
-    timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && mv temp sub.txt
+    axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && mv temp sub.txt
     # axiom-scan wildcards.txt -m subgen -o subgen.txt && cat subgen.txt | anew sub.txt && rm subgen.txt
     # axiom-scan "$FILE" -m asnrecon -anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
@@ -88,14 +88,12 @@ run_dns_mass() {
     run_probing
 }
 
-# -ports 80,443,3000,5000,7000,8001,8000,8090,9000,10000,10001,8080
-
 run_probing() {
     axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > ~/lists/resolvers.txt"
     axiom-scan sub.txt -m dnsx -threads 300 -o dnsx.txt --rm-logs
     # axiom-scan dnsx.txt -m naabu --top-ports 100 -o dns && mv dns dnsx.txt
-    axiom-scan dnsx.txt -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports 80,443,3000,5000,7000,8001,8000,8090,9000,9001,10000,10001,8080 -sc -ct -server -anew techs.txt --rm-logs
-    cat techs.txt | grep -vi failed | anew subdomains/techs.txt
+    axiom-scan dnsx.txt -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports 80,443,3000,5000,7000,8001,8000,8090,9000,9001,10000,10001,8080 -sc -ct -server -o techs.txt --rm-logs
+    cat techs.txt | grep -vi failed | anew subdomains/techs.txt && rm techs.txt
     mv sub.txt subdomains/
 }
 
