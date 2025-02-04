@@ -75,14 +75,14 @@ run_subdomain_enumeration() {
 
 run_dns_mass() {
     axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
-    #axiom-scan sub.txt -m subfinder -all -silent -recursive --rm-logs -anew temp && cat temp | anew sub.txt && rm temp
+    axiom-scan sub.txt -m subfinder -all -silent -recursive --rm-logs -anew temp && cat temp | anew sub.txt && rm temp
     axiom-scan wildcards.txt -m puredns-bruteforce -anew sub.txt
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
     axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
     timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && mv temp sub.txt
-    axiom-scan wildcards.txt -m subgen -o subgen.txt && cat subgen.txt | anew sub.txt && rm subgen.txt
-    axiom-scan "$FILE" -m asnrecon -anew sub.txt
+    # axiom-scan wildcards.txt -m subgen -o subgen.txt && cat subgen.txt | anew sub.txt && rm subgen.txt
+    # axiom-scan "$FILE" -m asnrecon -anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
     grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
     run_probing
