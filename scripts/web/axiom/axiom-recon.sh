@@ -80,7 +80,7 @@ run_dns_mass() {
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
     axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
-    axiom-scan "$FILE" -m findomain --external-subdomains -o temp && cat temp | anew sub.txt
+    axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && cat temp | anew sub.txt
     # axiom-scan wildcards.txt -m subgen -o subgen.txt && cat subgen.txt | anew sub.txt && rm subgen.txt
     # axiom-scan "$FILE" -m asnrecon -anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
