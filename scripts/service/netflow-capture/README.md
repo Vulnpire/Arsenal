@@ -7,6 +7,7 @@ NetFlow Packet Capture GUI is a Python-based tool for real-time network traffic 
 - **Filter by source IP, destination IP, and protocol (TCP/UDP/ICMP)**
 - **Start and stop capturing with a simple GUI**
 - **Export captured packets to CSV**
+- **Capture only NetFlow packets (UDP on port 2055)**
 - **Requires sudo privileges for packet sniffing**
 
 ## Installation
