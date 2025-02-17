@@ -5,6 +5,7 @@ import threading
 import os
 import sys
 
+# Ensure the script runs with sudo privileges
 def check_sudo():
     if os.geteuid() != 0:
         messagebox.showerror("Permission Error", "This script requires sudo privileges.")
@@ -12,6 +13,7 @@ def check_sudo():
 
 # A message box should show an error, and the script should exit.
 
+# Get the active network interface
 def get_active_interface():
     interfaces = get_if_list()
     for iface in interfaces:
@@ -21,20 +23,27 @@ def get_active_interface():
 
 # Should fall back to "eth0" without crashing
 
+# Callback function to process captured packets
 def packet_callback(packet):
     if packet.haslayer(IP):
         src_ip = packet[IP].src
         dst_ip = packet[IP].dst
         proto = "TCP" if packet.haslayer(TCP) else "UDP" if packet.haslayer(UDP) else "ICMP" if packet.haslayer(ICMP) else "Other"
         
-        if (not src_filter.get() or src_filter.get() in src_ip) and \
-           (not dst_filter.get() or dst_filter.get() in dst_ip) and \
-           (not proto_filter.get() or proto_filter.get().upper() == proto):
-            tree.insert("", tk.END, values=(src_ip, dst_ip, proto))
+        if netflow_filter.get():
+            # Capture only NetFlow packets (UDP on port 2055)
+            if packet.haslayer(UDP) and packet[UDP].dport == 2055:
+                tree.insert("", tk.END, values=(src_ip, dst_ip, "NetFlow"))
+        else:
+            if (not src_filter.get() or src_filter.get() in src_ip) and \
+               (not dst_filter.get() or dst_filter.get() in dst_ip) and \
+               (not proto_filter.get() or proto_filter.get().upper() == proto):
+                tree.insert("", tk.END, values=(src_ip, dst_ip, proto))
 
 # Capturing packets with filters set
 # Only packets matching the filter should be displayed
 
+# Start sniffing packets
 def start_sniffing():
     global sniffing
     sniffing = True
@@ -46,6 +55,7 @@ def start_sniffing():
 # Starting packet capture on an active network
 # Packets should start appearing in the table
 
+# Stop sniffing packets
 def stop_sniffing():
     global sniffing
     sniffing = False
@@ -56,6 +66,7 @@ def stop_sniffing():
 # Clicking stop capture while packets are being captured
 # Capture should stop, and no more packets should be added
 
+# Clear the table
 def clear_table():
     for item in tree.get_children():
         tree.delete(item)
@@ -63,6 +74,7 @@ def clear_table():
 # Clearing the table after packets are captured
 # The table should be empty now after clicking "Clear Table"
 
+# Export captured data to CSV
 def export_data():
     with open("captured_packets.csv", "w") as f:
         f.write("Source IP,Destination IP,Protocol\n")
@@ -94,17 +106,21 @@ tk.Label(frame, text="Protocol (TCP/UDP/ICMP):").grid(row=2, column=0)
 proto_filter = tk.Entry(frame)
 proto_filter.grid(row=2, column=1)
 
+netflow_filter = tk.BooleanVar()
+netflow_checkbox = tk.Checkbutton(frame, text="Capture only NetFlow packets", variable=netflow_filter)
+netflow_checkbox.grid(row=3, column=0, columnspan=2, pady=5)
+
 start_button = tk.Button(frame, text="Start Capture", command=start_sniffing)
-start_button.grid(row=3, column=0, pady=5)
+start_button.grid(row=4, column=0, pady=5)
 
 stop_button = tk.Button(frame, text="Stop Capture", command=stop_sniffing, state=tk.DISABLED)
-stop_button.grid(row=3, column=1, pady=5)
+stop_button.grid(row=4, column=1, pady=5)
 
 clear_button = tk.Button(frame, text="Clear Table", command=clear_table)
-clear_button.grid(row=4, column=0, pady=5)
+clear_button.grid(row=5, column=0, pady=5)
 
 export_button = tk.Button(frame, text="Export Data", command=export_data)
-export_button.grid(row=4, column=1, pady=5)
+export_button.grid(row=5, column=1, pady=5)
 
 columns = ("Source IP", "Destination IP", "Protocol")
 tree = ttk.Treeview(root, columns=columns, show="headings")
@@ -114,7 +130,5 @@ for col in columns:
 tree.pack(pady=10)
 
 sniffing = False
-
-root.after(100, start_sniffing)
 
 root.mainloop()
