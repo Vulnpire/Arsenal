@@ -1,6 +1,10 @@
 # EverEnum
 
 is a **high-performance enumeration tool** designed for **penetration testers** and **bug bounty hunters**. It automates **fuzzing** for sensitive files, credentials, logs, and misconfigurations across web applications and APIs.
+The tool is particularly effective in **list everything**.
+
+![image](https://github.com/user-attachments/assets/b081b038-50a2-4021-bd41-aa34677efaab)
+
 
 ## 🚀 Features
 
