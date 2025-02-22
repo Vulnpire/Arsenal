@@ -110,12 +110,13 @@ run_waymore() {
     timeout --foreground 6700 axiom-scan "$FILE" -m waymore -p 5 -mc 200 -mode U --rm-logs -o gau.txt
 
     ### Google dorking
-    axiom-scan "$FILE" -m banshee -q "ext:php | ext:asp | ext:aspx | ext:jsp | ext:jspx | ext:cfm" --pages 10 --delay 2 --recursive -anew dorking
+    axiom-scan "$FILE" -m banshee -q "(ext:php | ext:asp | ext:aspx | ext:jsp | ext:jspx | ext:cfm)" --pages 10 --delay 2 --recursive -anew dorking
     axiom-scan "$FILE" -m banshee -q "ext:php | ext:asp | ext:aspx | ext:jsp | ext:jspx | ext:cfm (inurl:id)" --pages 10 --delay 2 --recursive -anew dorking
-    axiom-scan "$FILE" -m banshee -q "inurl:id | inurl:order_id | inurl:lang | inurl:country | inurl:cid" --pages 10 --delay 2 --recursive -anew dorking
+    axiom-scan "$FILE" -m banshee -q "(inurl:id | inurl:order_id | inurl:lang | inurl:country | inurl:cid)" --pages 10 --delay 2 --recursive -anew dorking
     axiom-scan "$FILE" -m banshee -q "inurl:& | inurl:?" --pages 10 --delay 2 --recursive -anew dorking
     axiom-scan "$FILE" -m banshee -q "inurl:? (inurl:id | inurl:page | inurl:lang)" --pages 10 --delay 2 -anew dorking
-    axiom-scan "$FILE" -m banshee -q "inurl:?" --pages 10 --delay 2 --recursive -anew dorking
+    axiom-scan "$FILE" -m banshee -q "(inurl:?)" --pages 10 --delay 2 --recursive -anew dorking
+    axiom-scan "$FILE" -m banshee -q "(inurl:= | inurl:?)" --pages 10 --delay 2 -anew dorking
     cat dorking | anew -q gau.txt
     run_crawling
 }
