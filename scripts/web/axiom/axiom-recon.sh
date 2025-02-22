@@ -166,7 +166,7 @@ run_katana() {
 
     timeout --foreground 3200 axiom-scan hakrawler.txt -m wraith -crawl-js -subs -o plus --rm-logs && cat plus | anew hakrawler.txt && rm plus
     cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
-    cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
+    cat gau.txt hakrawler.txt | sort -u | uro | urldedupe > uri.txt
     mv uri.txt crawl/uri.txt
 
     timeout --foreground 3300 axiom-scan crawl/uri.txt -m gospider --subs --include-subs -o plus --rm-logs
@@ -221,7 +221,7 @@ run_only_domain() {
 
     timeout --foreground 3200 axiom-scan hakrawler.txt -m wraith -o plus --rm-logs && cat plus | anew akatana.txt && rm plus
     cat akatana.txt | anew hakrawler.txt && cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
-    cat gau.txt hakrawler.txt | sort -u | uro > uri.txt
+    cat gau.txt hakrawler.txt | sort -u | uro | urldedupe> uri.txt
     grep -E "$(paste -sd '|' wildcards.txt)" uri.txt > temp && mv temp uri.txt
     mv uri.txt crawl/
     cat crawl/uri.txt | grep -Ei "\.js$" > crawl/js.urls
