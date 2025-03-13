@@ -122,7 +122,7 @@ run_waymore() {
 }
 
 run_crawling() {
-    timeout --foreground 6700 axiom-scan "$FILE" -m waybackurls --rm-logs -anew gau.txt.1 && cat gau.txt.1 | anew gau.txt && rm gau.txt.1
+    # timeout --foreground 6700 axiom-scan "$FILE" -m waybackurls --rm-logs -anew gau.txt.1 && cat gau.txt.1 | anew gau.txt && rm gau.txt.1
     axiom-scan "$FILE" -m gau --threads 25 --subs --providers wayback,commoncrawl,otx,urlscan --mc 200 --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot | anew gau.txt
     grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" gau.txt | sort -u > temp && mv temp gau.txt
     sed 's|^|http://|' "$FILE" > crawl.txt
@@ -148,13 +148,13 @@ run_advanced_crawling() {
 }
 
 run_hakrawler() {
-    timeout --foreground 3700 axiom-scan crawl.txt -m wraith -subs -crawl-js -anew hakrawler.txt --rm-logs
+    timeout --foreground 900 axiom-scan crawl.txt -m wraith -subs -crawl-js -anew hakrawler.txt --rm-logs
     cat cleaned_output.txt | anew hakrawler.txt && rm cleaned_output.txt
     run_advanced_crawling2
 }
 
 run_advanced_crawling2() {
-    timeout --foreground 4800 axiom-scan hakrawler.txt -m wraith -crawl-js -subs -o plus --rm-logs
+    timeout --foreground 500 axiom-scan hakrawler.txt -m wraith -crawl-js -subs -o plus --rm-logs
     cat plus | anew hakrawler.txt && rm plus
     run_katana
 }
@@ -195,7 +195,7 @@ run_only_domain() {
     grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" gau.txt | sort -u > temp && mv temp gau.txt
     sed 's|^|http://|' "$FILE" > crawl.txt
 
-    timeout --foreground 5000 axiom-scan crawl.txt -m gospider -o out --rm-logs
+    timeout --foreground 1200 axiom-scan crawl.txt -m gospider -o out --rm-logs
     find plus/ -type f -exec cat {} + | sed -e 's/^\[linkfinder\] - //g' \
                                       -e 's/^\[url\] - \[code-[0-9]\{3\}\] - //g' \
                                       -e 's/^\[href\] - //g' \
