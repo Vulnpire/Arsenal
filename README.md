@@ -206,3 +206,9 @@ echo "API Key Scan Completed. Results saved to $output_file"
 ```
 subfinder -d target.com -silent | httpx -silent | wraith -subs -crawl-js | tr '[:punct:]' '\n' | sort -u
 ```
+
+## Search for default creds
+
+```
+pip3 install defaultcreds-cheat-sheet
+```
