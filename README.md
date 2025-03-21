@@ -200,3 +200,9 @@ sort -u "$output_file" -o "$output_file"
 
 echo "API Key Scan Completed. Results saved to $output_file"
 ```
+
+## Create wordlist for DNS brute-forcing
+
+```
+subfinder -d target.com -silent | httpx -silent | wraith -subs -crawl-js | tr '[:punct:]' '\n' | sort -u
+```
