@@ -67,6 +67,12 @@ run_subdomain_enumeration() {
     axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
     axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
     timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp --rm-logs && cat temp | anew sub.txt
+    while read -r DOMAIN; do
+        (curl -s "https://crt.sh/?q=%25.$DOMAIN&output=json" | jq -r '.[].name_value' | sed 's/\*\.//g' ;
+         curl -s "https://otx.alienvault.com/api/v1/indicators/domain/$DOMAIN/passive_dns" | jq -r '.passive_dns[].hostname' ;
+         curl -s "https://api.hackertarget.com/hostsearch/?q=$DOMAIN" | cut -d, -f1
+        ) | sort -u
+    done < "$FILE" | anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
     # axiom-scan "$FILE" -m asnrecon -anew sub.txt
     grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
@@ -79,6 +85,12 @@ run_dns_mass() {
     axiom-scan "$FILE" -m puredns-bruteforce -anew sub.txt
     axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
     axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
+    while read -r DOMAIN; do
+        (curl -s "https://crt.sh/?q=%25.$DOMAIN&output=json" | jq -r '.[].name_value' | sed 's/\*\.//g' ;
+         curl -s "https://otx.alienvault.com/api/v1/indicators/domain/$DOMAIN/passive_dns" | jq -r '.passive_dns[].hostname' ;
+         curl -s "https://api.hackertarget.com/hostsearch/?q=$DOMAIN" | cut -d, -f1
+        ) | sort -u
+    done < "$FILE" | anew sub.txt
     axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
     axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && cat temp | anew sub.txt
     # axiom-scan wildcards.txt -m subgen -o subgen.txt && cat subgen.txt | anew sub.txt && rm subgen.txt
