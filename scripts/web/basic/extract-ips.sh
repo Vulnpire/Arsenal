@@ -27,7 +27,9 @@ if [ "$VERBOSE" == "true" ]; then
 fi
 
 # Process input from stdin and handle it line by line
-xargs -n 1 -I {} shodan host {} | awk -v pattern="$PATTERN" -v verbose="$VERBOSE" '
+xargs -n 1 -I {} bash -c '
+    sleep 3  # Add delay before each request
+    shodan host {}' | awk -v pattern="$PATTERN" -v verbose="$VERBOSE" '
     # Match IP address (only the first occurrence)
     /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ {
         ip=$1
