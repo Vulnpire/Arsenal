@@ -354,5 +354,3 @@ alias k=kubectl
 ```
 
 ---
-
-Let me know if you'd like to add Helm, Ingress, StatefulSets, or CRDs as well.
