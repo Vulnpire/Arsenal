@@ -1,19 +1,14 @@
 #!/bin/bash
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage: bash $0 <file_with_hosts>"
-    exit 1
-fi
+PROXY="http://127.0.0.1:8080"
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
-hosts_file="$1"
+while IFS= read -r url; do
+    # Skip empty lines
+    [[ -z "$url" ]] && continue
 
-proxy="http://127.0.0.1:8080"
-
-if [ ! -f "$hosts_file" ]; then
-    echo "Error: File '$hosts_file' not found!"
-    exit 1
-fi
-
-while IFS= read -r host; do
-    curl -s --proxy "$proxy" "$host"
-done < "$hosts_file"
+#    echo "[+] Requesting: $url"
+    curl --silent --proxy "$PROXY" -L --insecure -A "$UA" "$url" \
+        -o /dev/null \
+        -w "[%{http_code}] %{url_effective}\n"
+done
