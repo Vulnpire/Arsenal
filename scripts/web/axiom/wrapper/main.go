@@ -13,8 +13,18 @@ import (
 )
 
 func main() {
+        // Select all axiom instances first
+        selectCmd := exec.Command("axiom-select", "*")
+        selectCmd.Stdout = os.Stdout
+        selectCmd.Stderr = os.Stderr
+        err := selectCmd.Run()
+        if err != nil {
+                fmt.Println("Error: Failed to run 'axiom-select \"*\"'")
+                os.Exit(1)
+        }
+
         // Ensure axiom-scan is installed
-        _, err := exec.LookPath("axiom-scan")
+        _, err = exec.LookPath("axiom-scan")
         if err != nil {
                 fmt.Println("Error: axiom-scan is not installed or not in PATH.")
                 os.Exit(1)
@@ -51,7 +61,7 @@ func main() {
         // Prevent multiple Wait() calls
         var waitOnce sync.Once
 
-        // Handle SIGINT (CTRL+C) for cleanup **AFTER axiom-scan exits**
+        // Handle SIGINT (CTRL+C) for cleanup AFTER axiom-scan exits
         sigChan := make(chan os.Signal, 1)
         signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
@@ -59,7 +69,6 @@ func main() {
                 <-sigChan
                 fmt.Println("\n[!] CTRL+C detected. Waiting for axiom-scan to exit...")
 
-                // Ensure process exists before waiting for it
                 if cmd.Process != nil {
                         waitOnce.Do(func() {
                                 err := cmd.Wait()
@@ -69,9 +78,7 @@ func main() {
                         })
                 }
 
-                // Remove temporary file
                 os.Remove(tempFile.Name())
-
                 os.Exit(0)
         }()
 
@@ -86,17 +93,14 @@ func main() {
         }
         tempFile.Close()
 
-        // Start the process
+        // Start axiom-scan
         err = cmd.Start()
         if err != nil {
                 fmt.Println("Error: Failed to start axiom-scan.")
                 os.Exit(1)
         }
 
-        // Stream output while:
-        // - Removing first 9 lines
-        // - Removing blank lines
-        // - Filtering `==> /home/...` and `==> /root/...`
+        // Stream and filter axiom-scan output
         scanner = bufio.NewScanner(stdout)
         lineCount := 0
         pathPattern := regexp.MustCompile(`==> /(home|root)/.*`)
@@ -104,25 +108,25 @@ func main() {
         for scanner.Scan() {
                 line := scanner.Text()
 
-                // Skip first 9 lines (Axiom banner)
+                // Skip axiom-scan banner (first 9 lines)
                 if lineCount < 9 {
                         lineCount++
                         continue
                 }
 
-                // Remove `==> /home/...` and `==> /root/...`
+                // Remove log file path lines
                 line = pathPattern.ReplaceAllString(line, "")
 
-                // Remove blank lines
+                // Skip blank lines
                 if strings.TrimSpace(line) == "" {
                         continue
                 }
 
-                // Print filtered output
+                // Output the clean result
                 fmt.Println(line)
         }
 
-        // Wait for process to complete normally, but only once
+        // Wait for axiom-scan to finish
         waitOnce.Do(func() {
                 err = cmd.Wait()
                 if err != nil {
@@ -130,6 +134,6 @@ func main() {
                 }
         })
 
-        // Cleanup **only after axiom-scan exits**
+        // Final cleanup
         os.Remove(tempFile.Name())
 }
