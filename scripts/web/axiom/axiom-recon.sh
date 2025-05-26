@@ -61,28 +61,28 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 run_subdomain_enumeration() {
-    axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
-    # axiom-scan "$FILE" -m subdominator -o subd.txt
-    axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
-    axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
-    axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
-    timeout --foreground 1800 axiom-scan "$FILE" -m findomain --external-subdomains -anew temp --rm-logs && cat temp | anew sub.txt
+    cat "$FILE" | axs -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
+    # cat "$FILE" -m subdominator -o subd.txt
+    cat "$FILE" | axs -m assetfinder -subs-only --rm-logs -anew sub.txt
+    cat "$FILE" | axs -m shosubgo -anew sub.txt --rm-logs
+    cat "$FILE" | axs -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
+    timeout --foreground 1800 cat "$FILE" | axs -m findomain --external-subdomains -anew temp --rm-logs && cat temp | anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
-    # axiom-scan "$FILE" -m asnrecon -anew sub.txt
+    # cat "$FILE" -m asnrecon -anew sub.txt
     grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
     run_probing
 }
 
 run_dns_mass() {
-    axiom-scan "$FILE" -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
-    axiom-scan sub.txt -m subfinder -all -silent -recursive --rm-logs -anew temp && cat temp | anew sub.txt && rm temp
-    axiom-scan "$FILE" -m puredns-bruteforce -anew sub.txt
-    axiom-scan "$FILE" -m assetfinder -subs-only --rm-logs -anew sub.txt
-    axiom-scan "$FILE" -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
-    axiom-scan "$FILE" -m shosubgo -anew sub.txt --rm-logs
-    axiom-scan "$FILE" -m findomain --external-subdomains -anew temp && cat temp | anew sub.txt
-    # axiom-scan wildcards.txt -m subgen -o subgen.txt && cat subgen.txt | anew sub.txt && rm subgen.txt
-    # axiom-scan "$FILE" -m asnrecon -anew sub.txt
+    cat "$FILE" | axs -m subfinder -all -silent -recursive --rm-logs -anew sub.txt
+    cat sub.txt | axs -m subfinder -all -silent -recursive --rm-logs -anew temp && cat temp | anew sub.txt && rm temp
+    cat "$FILE" | axs -m puredns-bruteforce -anew sub.txt
+    cat "$FILE" | axs -m assetfinder -subs-only --rm-logs -anew sub.txt
+    cat "$FILE" | axs -m chaos -anew chaos.txt && cat chaos.txt | sed 's/^\*\.//' | anew sub.txt && rm chaos.txt
+    cat "$FILE" | axs -m shosubgo -anew sub.txt --rm-logs
+    cat "$FILE" | axs -m findomain --external-subdomains -anew temp && cat temp | anew sub.txt
+    # cat wildcards.txt -m subgen -o subgen.txt && cat subgen.txt | anew sub.txt && rm subgen.txt
+    # cat "$FILE" -m asnrecon -anew sub.txt
     cat sub.txt | sort -u > temp && mv temp sub.txt
     grep -E "$(paste -sd '|' wildcards.txt)" sub.txt > temp && mv temp sub.txt
     run_probing
@@ -90,40 +90,40 @@ run_dns_mass() {
 
 run_probing() {
     axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > ~/lists/resolvers.txt"
-    axiom-scan sub.txt -m dnsx -threads 300 -o dnsx.txt --rm-logs
-    # axiom-scan dnsx.txt -m naabu --top-ports 100 -o dns && mv dns dnsx.txt
-    axiom-scan dnsx.txt -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports 80,443,3000,5000,7000,8001,8000,8090,9000,9001,10000,10001,8080 -sc -ct -server -o techs.txt --rm-logs
+    cat sub.txt | axs -m dnsx -threads 300 -o dnsx.txt --rm-logs
+    # cat dnsx.txt -m naabu --top-ports 100 -o dns && mv dns dnsx.txt
+    cat dnsx.txt | axs -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports 80,443,3000,5000,7000,8001,8000,8090,9000,9001,10000,10001,8080 -sc -ct -server -o techs.txt --rm-logs
     cat techs.txt | grep -vi failed | anew subdomains/techs.txt && rm techs.txt
     mv sub.txt subdomains/
 }
 
 run_sub_portscan() {
     cat subdomains/alive.txt | anew ips.check
-    axiom-scan ips.check -m dnsx -threads 300 -o sub.ips.dnsx --rm-logs
+    cat ips.check | axs -m dnsx -threads 300 -o sub.ips.dnsx --rm-logs
     cat sub.ips.dnsx | sed -e 's/^http:\/\/\(.*\)/\1/' -e 's/^https:\/\/\(.*\)/\1/' > temp && mv temp sub.ips.dnsx && rm ips.check
     for i in $(cat sub.ips.dnsx);do shodan host $i;done | anew check/ips/sub.ports
-    axiom-scan sub.ips.dnsx -m httpx -threads 300 -rl 200 -anew sub.ips.httpx --rm-logs
+    cat sub.ips.dnsx | axs -m httpx -threads 300 -rl 200 -anew sub.ips.httpx --rm-logs
     rm sub.ips.dnsx && mv sub.ips.httpx checks/ips/
 }
 
 run_waymore() {
-    timeout --foreground 6700 axiom-scan "$FILE" -m waymore -p 5 -mc 200 -mode U --rm-logs -o gau.txt
+    timeout --foreground 6700 cat "$FILE" | axs -m waymore -p 5 -mc 200 -mode U --rm-logs -o gau.txt
 
     ### Google dorking
-    axiom-scan "$FILE" -m banshee -q "(ext:php | ext:asp | ext:aspx | ext:jsp | ext:jspx | ext:cfm)" --pages 10 --delay 2 --recursive -anew dorking
-    axiom-scan "$FILE" -m banshee -q "ext:php | ext:asp | ext:aspx | ext:jsp | ext:jspx | ext:cfm (inurl:id)" --pages 10 --delay 2 --recursive -anew dorking
-    axiom-scan "$FILE" -m banshee -q "(inurl:id | inurl:order_id | inurl:lang | inurl:country | inurl:cid)" --pages 10 --delay 2 --recursive -anew dorking
-    axiom-scan "$FILE" -m banshee -q "inurl:& | inurl:?" --pages 10 --delay 2 --recursive -anew dorking
-    axiom-scan "$FILE" -m banshee -q "inurl:? (inurl:id | inurl:page | inurl:lang)" --pages 10 --delay 2 -anew dorking
-    axiom-scan "$FILE" -m banshee -q "(inurl:?)" --pages 10 --delay 2 --recursive -anew dorking
-    axiom-scan "$FILE" -m banshee -q "(inurl:= | inurl:?)" --pages 10 --delay 2 -anew dorking
+    timeout --foreground 90 cat "$FILE" | axs -m banshee -q "(ext:php | ext:asp | ext:aspx | ext:jsp | ext:jspx | ext:cfm)" --pages 10 --delay 2 --recursive -anew dorking
+    timeout --foreground 90 cat "$FILE" | axs -m banshee -q "ext:php | ext:asp | ext:aspx | ext:jsp | ext:jspx | ext:cfm (inurl:id)" --pages 10 --delay 2 --recursive -anew dorking
+    timeout --foreground 90 cat "$FILE" | axs -m banshee -q "(inurl:id | inurl:order_id | inurl:lang | inurl:country | inurl:cid)" --pages 10 --delay 2 --recursive -anew dorking
+    timeout --foreground 90 cat "$FILE" | axs -m banshee -q "inurl:& | inurl:?" --pages 10 --delay 2 --recursive -anew dorking
+    timeout --foreground 90 cat "$FILE" | axs -m banshee -q "inurl:? (inurl:id | inurl:page | inurl:lang)" --pages 10 --delay 2 -anew dorking
+    timeout --foreground 90 cat "$FILE" | axs -m banshee -q "(inurl:?)" --pages 10 --delay 2 --recursive -anew dorking
+    timeout --foreground 90 cat "$FILE" | axs -m banshee -q "(inurl:= | inurl:?)" --pages 10 --delay 2 -anew dorking
     cat dorking | anew -q gau.txt
     run_crawling
 }
 
 run_crawling() {
-    # timeout --foreground 6700 axiom-scan "$FILE" -m waybackurls --rm-logs -anew gau.txt.1 && cat gau.txt.1 | anew gau.txt && rm gau.txt.1
-    axiom-scan "$FILE" -m gau --threads 25 --subs --providers wayback,commoncrawl,otx,urlscan --mc 200 --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot | anew gau.txt
+    # timeout --foreground 6700 cat "$FILE" -m waybackurls --rm-logs -anew gau.txt.1 && cat gau.txt.1 | anew gau.txt && rm gau.txt.1
+    cat "$FILE" | axs -m gau --threads 25 --subs --providers wayback,commoncrawl,otx,urlscan --mc 200 --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot | anew gau.txt
     grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" gau.txt | sort -u > temp && mv temp gau.txt
     sed 's|^|http://|' "$FILE" > crawl.txt
 
@@ -131,7 +131,7 @@ run_crawling() {
 }
 
 run_advanced_crawling() {
-    timeout --foreground 5000 axiom-scan crawl.txt -m gospider --subs --include-subs -o out --rm-logs
+    timeout --foreground 5000 cat crawl.txt | axs -m gospider --subs --include-subs -o out --rm-logs
     find out/ -type f -exec cat {} + | sed -e 's/^\[linkfinder\] - //g' \
                                       -e 's/^\[url\] - \[code-[0-9]\{3\}\] - //g' \
                                       -e 's/^\[href\] - //g' \
@@ -148,13 +148,13 @@ run_advanced_crawling() {
 }
 
 run_hakrawler() {
-    timeout --foreground 900 axiom-scan crawl.txt -m wraith -subs -crawl-js -anew hakrawler.txt --rm-logs
+    timeout --foreground 900 cat crawl.txt | axs -m wraith -subs -crawl-js -anew hakrawler.txt --rm-logs
     cat cleaned_output.txt | anew hakrawler.txt && rm cleaned_output.txt
     run_advanced_crawling2
 }
 
 run_advanced_crawling2() {
-    timeout --foreground 500 axiom-scan hakrawler.txt -m wraith -crawl-js -subs -o plus --rm-logs
+    timeout --foreground 500 cat hakrawler.txt | axs -m wraith -crawl-js -subs -o plus --rm-logs
     cat plus | anew hakrawler.txt && rm plus
     run_katana
 }
@@ -162,15 +162,15 @@ run_advanced_crawling2() {
 run_katana() {
     local headers='-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.171 Safari/537.36"'
  
-    timeout --foreground 3700 axiom-scan crawl.txt -m katana -jsluice -kf all -pss waybackarchive,commoncrawl,alienvault -passive -jc $headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
+    timeout --foreground 3700 cat crawl.txt | axs -m katana -jsluice -kf all -pss waybackarchive,commoncrawl,alienvault -passive -jc $headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
     cat vkatana.txt | anew hakrawler.txt && rm vkatana.txt
 
-    timeout --foreground 3200 axiom-scan hakrawler.txt -m wraith -crawl-js -subs -o plus --rm-logs && cat plus | anew hakrawler.txt && rm plus
+    timeout --foreground 3200 cat hakrawler.txt | axs -m wraith -crawl-js -subs -o plus --rm-logs && cat plus | anew hakrawler.txt && rm plus
     cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
     cat gau.txt hakrawler.txt | sort -u | uro | urldedupe > uri.txt
     mv uri.txt crawl/uri.txt
 
-    timeout --foreground 3300 axiom-scan crawl/uri.txt -m gospider --subs --include-subs -o plus --rm-logs
+    timeout --foreground 3300 cat crawl/uri.txt | axs -m gospider --subs --include-subs -o plus --rm-logs
 
     find plus/ -type f -exec cat {} + | sed -e 's/^\[linkfinder\] - //g' \
                                       -e 's/^\[url\] - \[code-[0-9]\{3\}\] - //g' \
@@ -190,12 +190,12 @@ run_katana() {
 }
 
 run_only_domain() {
-    timeout --foreground 6700 axiom-scan "$FILE" -m waymore -n -p 4 -mc 200 -mode U --rm-logs -anew gau.txt
-    cat "$FILE" | gau --threads 16 --providers wayback,commoncrawl,otx,urlscan --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot | anew gau.txt
+    timeout --foreground 6700 cat "$FILE" | axs -m waymore -n -p 4 -mc 200 -mode U --rm-logs -anew gau.txt
+    cat "$FILE" | axs -m gau --threads 16 --providers wayback,commoncrawl,otx,urlscan --blacklist png,jpg,jpeg,gif,mp3,mp4,svg,woff,woff2,otf,css,exe,ttf,eot -anew gau.txt
     grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" gau.txt | sort -u > temp && mv temp gau.txt
     sed 's|^|http://|' "$FILE" > crawl.txt
 
-    timeout --foreground 1200 axiom-scan crawl.txt -m gospider -o out --rm-logs
+    timeout --foreground 1200 cat crawl.txt | axs -m gospider -o out --rm-logs
     find plus/ -type f -exec cat {} + | sed -e 's/^\[linkfinder\] - //g' \
                                       -e 's/^\[url\] - \[code-[0-9]\{3\}\] - //g' \
                                       -e 's/^\[href\] - //g' \
@@ -208,19 +208,19 @@ run_only_domain() {
                                       -e '/^$/d' | grep -Evi "png|jpg|gif|jpeg|swf|woff|svg|pdf|css|webp|woff|woff2|eot|ttf|otf|mp4|txt" | sort -u > cleaned_output.txt
     rm -rf out/
 
-    timeout --foreground 3700 axiom-scan crawl.txt -m wraith -anew hakrawler.txt --rm-logs
+    timeout --foreground 3700 cat crawl.txt | axs -m wraith -anew hakrawler.txt --rm-logs
     cat cleaned_output.txt | anew hakrawler.txt && rm cleaned_output.txt
 
-    timeout --foreground 4800 axiom-scan hakrawler.txt -m wraith -o plus --rm-logs
+    timeout --foreground 4800 cat hakrawler.txt | axs -m wraith -o plus --rm-logs
 
     cat plus | anew hakrawler.txt && rm plus
 
     local dom_headers='-H "User-Agent: Mozilla/5.0 (Linux; Android 11; DT2002C; Build/RKQ1.201217.002) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.4280.141 Mobile Safari/537.36 Firefox-KiToBrowser/124.0"'
     
-    timeout --foreground 3700 axiom-scan crawl.txt -m katana -jsluice -kf all -fs dn -pss waybackarchive,commoncrawl,alienvault -passive -jc $dom_headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
+    timeout --foreground 3700 cat crawl.txt | axs -m katana -jsluice -kf all -fs dn -pss waybackarchive,commoncrawl,alienvault -passive -jc $dom_headers -nc -d 10 -aff -c 30 -silent -s breadth-first -rl 190 -anew vkatana.txt --rm-logs
     cat vkatana.txt | anew hakrawler.txt && rm vkatana.txt
 
-    timeout --foreground 3200 axiom-scan hakrawler.txt -m wraith -o plus --rm-logs && cat plus | anew akatana.txt && rm plus
+    timeout --foreground 3200 cat hakrawler.txt | axs -m wraith -o plus --rm-logs && cat plus | anew akatana.txt && rm plus
     cat akatana.txt | anew hakrawler.txt && cat hakrawler.txt | sort -u > temp && mv temp hakrawler.txt
     cat gau.txt hakrawler.txt | sort -u | uro | urldedupe> uri.txt
     grep -E "$(paste -sd '|' wildcards.txt)" uri.txt > temp && mv temp uri.txt
