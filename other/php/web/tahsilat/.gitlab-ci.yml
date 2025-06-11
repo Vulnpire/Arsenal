@@ -1,0 +1,84 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "trigger"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - when: never  # fallback: never run
+
+stages:
+  - deploy
+
+deploy_test:
+  stage: deploy
+  image: php:8.2-fpm
+  before_script:
+    - apt-get update && apt-get install -y openssh-client git unzip curl
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 104.247.164.80 >> ~/.ssh/known_hosts
+  script:
+    - echo "Deploying to test server..." 
+    - ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@104.247.164.80 "
+        cd /var/www/test &&
+        echo \"APP_URL=$APP_URL\" > .env &&
+        echo \"APP_KEY=\" >> .env &&
+        echo \"APP_ENV=test\" >> .env &&
+        echo \"DB_HOST=$DB_HOST\" >> .env &&
+        echo \"DB_USERNAME=$DB_USERNAME\" >> .env &&
+        echo \"DB_PASSWORD=$DB_PASSWORD\" >> .env &&
+        echo \"DB_DATABASE=$DB_DATABASE_TEST\" >> .env &&
+        git reset --hard &&
+        git clean -fd &&
+        git pull origin test &&
+        docker-compose -f docker-compose.test.yml down &&
+        docker-compose -f docker-compose.test.yml up --build -d &&
+        docker exec -t laravel_test_app bash -c \"sed -i 's/8080/9000/g' .env\" &&
+        docker exec -t laravel_test_app bash -c \"php artisan config:clear && php artisan cache:clear\"
+      " 
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "test"'
+      when: always
+
+deploy_main:
+  stage: deploy
+  image: php:8.2-fpm
+  before_script:
+    - apt-get update && apt-get install -y openssh-client git unzip curl
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 104.247.164.80 >> ~/.ssh/known_hosts
+  script:
+    - echo "Deploying to main server..."
+    - ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@104.247.164.80 "
+        cd /var/www/main &&
+        echo \"APP_URL=$APP_URL\" > .env &&
+        echo \"APP_KEY=\" >> .env &&
+        echo \"APP_ENV=production\" >> .env &&
+        echo \"DB_HOST=$DB_HOST\" >> .env &&
+        echo \"DB_USERNAME=$DB_USERNAME\" >> .env &&
+        echo \"DB_PASSWORD=$DB_PASSWORD\" >> .env &&
+        echo \"DB_DATABASE=$DB_DATABASE_MAIN\" >> .env &&
+        git reset --hard &&
+        git clean -fd &&
+        git pull origin main &&
+        docker-compose -f docker-compose.main.yml down &&
+        docker-compose -f docker-compose.main.yml up --build -d &&
+        docker exec -t laravel_main_app bash -c \"sed -i 's/8080/3000/g' .env\" &&
+        docker exec -t laravel_main_app bash -c \"php artisan config:clear && php artisan cache:clear\"
+      "
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+
+# Fallback job for pipeline testing
+debug:
+  stage: deploy
+  script:
+    - echo "CI_COMMIT_BRANCH = $CI_COMMIT_BRANCH"
+    - echo "CI_PIPELINE_SOURCE = $CI_PIPELINE_SOURCE"
+  rules:
+    - when: manual

@@ -1,0 +1,58 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel_test_app
+    restart: always
+    working_dir: /var/www/html
+    command: >
+      bash -c "php artisan key:generate && php artisan migrate:fresh && php artisan serve --host=0.0.0.0 --port=9000"
+    volumes:
+      - .:/var/www/html
+    environment:
+      - APP_URL=https://tahsilat.oppenzatr.com
+      - DB_HOST=db
+      - DB_DATABASE=tahsilat_test
+      - DB_USERNAME=tahsilatdb
+      - DB_PASSWORD=501d3274-a4e9-4d6d
+      - APP_ENV=production
+    depends_on:
+      - db
+    networks:
+      - tahsilat_net
+    ports:
+      - "9000:9000"
+
+  db:
+    image: mysql:5.7
+    container_name: laravel_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: tahsilat_test
+      MYSQL_USER: tahsilatdb
+      MYSQL_PASSWORD: 501d3274-a4e9-4d6d
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - tahsilat_net
+    ports:
+      - "3306:3306"
+
+  frontend:
+    image: macikel/heraninda-tahsilat:latest
+    container_name: heraninda_frontend
+    restart: always
+    networks:
+      - tahsilat_net
+    ports:
+      - "3000:3000"
+    depends_on:
+      - app
+
+volumes:
+  mysql_data:
+
+networks:
+  tahsilat_net:
