@@ -92,7 +92,7 @@ run_probing() {
     axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > ~/lists/resolvers.txt"
     cat sub.txt | axs -m dnsx -threads 300 -o dnsx.txt --rm-logs
     # cat dnsx.txt -m naabu --top-ports 100 -o dns && mv dns dnsx.txt
-    cat dnsx.txt | axs -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports 80,443,3000,5000,7000,8001,8000,8090,9000,9001,10000,10001,8080 -sc -ct -server -o techs.txt --rm-logs
+    cat dnsx.txt | axs -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports $ports -sc -ct -server -o techs.txt --rm-logs
     cat techs.txt | grep -vi failed | anew subdomains/techs.txt && rm techs.txt
     mv sub.txt subdomains/
 }
@@ -154,7 +154,7 @@ run_hakrawler() {
 }
 
 run_advanced_crawling2() {
-    timeout --foreground 500 cat hakrawler.txt | axs -m wraith -crawl-js -subs -o plus --rm-logs
+    timeout --foreground 300 cat hakrawler.txt | axs -m wraith -crawl-js -subs -o plus --rm-logs
     cat plus | anew hakrawler.txt && rm plus
     run_katana
 }
