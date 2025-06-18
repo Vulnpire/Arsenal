@@ -9,48 +9,48 @@ fi
 INPUT="$1"
 VERBOSE=""
 
-# Check for -v flag for verbose output
+# Check for -v flag
 if [ "$2" == "-v" ]; then
     VERBOSE="true"
 fi
 
-# Check if INPUT is a file or a single domain
+# Build matching pattern
 if [ -f "$INPUT" ]; then
     PATTERN=$(tr '\n' '|' < "$INPUT" | sed 's/|$//')
 else
     PATTERN="$INPUT"
 fi
 
-# Debugging: Check if pattern is being passed correctly
+# Debugging: print pattern
 if [ "$VERBOSE" == "true" ]; then
     echo "Using pattern: $PATTERN"
 fi
 
-# Process input from stdin and handle it line by line
-xargs -n 1 -I {} bash -c '
-    sleep 3  # Add delay before each request
-    shodan host {}' | awk -v pattern="$PATTERN" -v verbose="$VERBOSE" '
-    # Match IP address (only the first occurrence)
-    /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ {
-        ip=$1
-    }
+# Main logic: process each IP/domain from stdin line-by-line
+while read -r target; do
+    sleep 1  # Enforce Shodan's 1 request/second rate limit
 
-    # Capture the "Hostnames" line, which contains domain names
-    /Hostnames:/ {
-        # Extract the hostnames part after the colon and trim spaces
-        hostnames = substr($0, index($0, "Hostnames:") + 10)
-        # Replace semicolons with spaces to facilitate pattern matching
-        gsub(";", " ", hostnames)
-        # Debugging: Print the hostnames for verification
-        if (verbose == "true") {
-            print "Hostnames: " hostnames
-        }
-        # Check if any of the hostnames match the given pattern
-        if (hostnames ~ pattern) {
-            if (verbose == "true") {
-                print "IP Match: " ip
-            }
-            print ip
-        }
-    }
-' | sort -u  # Sort the IPs and remove duplicates
+    # Get result from shodan
+    output=$(shodan host "$target")
+
+    # Extract IP (first IP line)
+    ip=$(echo "$output" | awk '/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ {print $1; exit}')
+
+    # Extract hostnames
+    host_line=$(echo "$output" | grep "Hostnames:")
+
+    # Clean hostnames line
+    hostnames=$(echo "$host_line" | sed 's/^.*Hostnames: //; s/;/ /g')
+
+    if [ "$VERBOSE" == "true" ]; then
+        echo "Hostnames: $hostnames"
+    fi
+
+    # Match hostnames against pattern
+    if echo "$hostnames" | grep -Eq "$PATTERN"; then
+        if [ "$VERBOSE" == "true" ]; then
+            echo "IP Match: $ip"
+        fi
+        echo "$ip"
+    fi
+done | sort -u
