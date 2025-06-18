@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Usage: cat urls.txt | ./vscope -f path/to/oos.txt
+
+# Parse args
+while getopts ":f:" opt; do
+  case ${opt} in
+    f ) OOS_FILE="$OPTARG"
+      ;;
+    \? ) echo "Usage: vscope -f path/to/oos.txt" >&2
+         exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$OOS_FILE" || ! -f "$OOS_FILE" ]]; then
+  echo "[-] Please provide a valid out-of-scope file with -f option."
+  exit 1
+fi
+
+# Read OOS patterns and build grep -v filters
+OOS_PATTERNS=$(sed '/^\s*$/d' "$OOS_FILE" | sed 's/[.[\*^$(){}?+|]/\\&/g')
+
+# Filter incoming lines
+grep -v -F -f <(echo "$OOS_PATTERNS")
