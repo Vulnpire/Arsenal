@@ -28,7 +28,7 @@ fi
 
 # Main logic: process each IP/domain from stdin line-by-line
 while read -r target; do
-    sleep 6  # Enforce Shodan's 6 request/second rate limit
+    sleep 11  # Enforce Shodan's 11 request/second rate limit (Axiom)
 
     # Get result from shodan
     output=$(shodan host "$target")
