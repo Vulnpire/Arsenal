@@ -92,7 +92,7 @@ run_probing() {
     axiom-exec "curl -s https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt > ~/lists/resolvers.txt"
     cat sub.txt | axs -m dnsx -threads 300 -o dnsx.txt --rm-logs
     # cat dnsx.txt -m naabu --top-ports 100 -o dns && mv dns dnsx.txt
-    cat dnsx.txt | axs -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports $ports -sc -ct -server -o techs.txt --rm-logs
+    cat dnsx.txt | axs -m httpx -threads 300 -rl 175 -random-agent -title -td -probe -ports 80,443,3000,3001,4000,5000,5443,7000,7001,7070,8000,8060,8080,8081,8089,8181,8443,8444,8880,8888,9000,9001,9090,9200,9443,1000,10000,10001,1337,15672,2375,2376,5985,5986,6080,6443 -sc -ct -server -o techs.txt --rm-logs
     cat techs.txt | grep -vi failed | anew subdomains/techs.txt && rm techs.txt
     mv sub.txt subdomains/
 }
