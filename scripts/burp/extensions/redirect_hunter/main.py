@@ -4,7 +4,7 @@ from javax.swing import (JPanel, JLabel, JTextField, JButton, BoxLayout, JScroll
                          JTextArea, JCheckBox, SwingConstants)
 from java.awt import BorderLayout, Dimension
 from java.net import URL
-import urllib
+from urllib import quote
 import threading
 import time
 
@@ -129,18 +129,19 @@ class BurpExtender(IBurpExtender, IHttpListener, ITab):
             self._stderr.println("[!] Error in processing request: %s" % str(e))
 
     def start_scan_thread(self, url, messageInfo):
-        def runner():
-            try:
-                self.scan_with_rate_limit(url, messageInfo)
-            except Exception as e:
-                self._stderr.println("[!] Thread error: %s" % str(e))
-            finally:
-                with self.lock:
-                    self.active_threads.remove(thread)
-
         with self.lock:
             if len(self.active_threads) >= self.max_threads:
                 return
+
+            def runner():
+                try:
+                    self.scan_with_rate_limit(url, messageInfo)
+                except Exception as e:
+                    self._stderr.println("[!] Thread error: %s" % str(e))
+                finally:
+                    with self.lock:
+                        self.active_threads.remove(thread)
+
             thread = threading.Thread(target=runner)
             self.active_threads.append(thread)
             thread.start()
@@ -165,13 +166,24 @@ class BurpExtender(IBurpExtender, IHttpListener, ITab):
 
             self.update_status("Scanning: %s" % base_url)
 
+            # Parse query params into a dict for safe replacement
+            params = {}
+            for param in query.split('&'):
+                key, sep, val = param.partition('=')
+                params[key] = val
+
             for payload in self.payloads:
-                for param in query.split('&'):
-                    key, _, val = param.partition('=')
+                for key in params:
                     if any(word in key.lower() for word in self.keywords):
-                        quoted = urllib.quote(payload)
-                        new_url = orig_url.replace(val, quoted)
-                        request = self._helpers.buildHttpRequest(URL(new_url))
+                        # Replace param value safely
+                        new_params = params.copy()
+                        new_params[key] = quote(payload)
+                        new_query = "&".join("%s=%s" % (k, v) for k, v in new_params.items())
+
+                        # Rebuild URL with new query
+                        url_base = orig_url.split('?')[0]
+                        new_url_str = url_base + "?" + new_query
+                        request = self._helpers.buildHttpRequest(URL(new_url_str))
                         resp = self._callbacks.makeHttpRequest(messageInfo.getHttpService(), request)
                         analyzed_resp = self._helpers.analyzeResponse(resp.getResponse())
 
@@ -179,7 +191,7 @@ class BurpExtender(IBurpExtender, IHttpListener, ITab):
                             if hdr.lower().startswith("location") and payload in hdr:
                                 issue = CustomScanIssue(
                                     messageInfo.getHttpService(),
-                                    URL(new_url),
+                                    URL(new_url_str),
                                     [messageInfo],
                                     "Open Redirect",
                                     "The application redirects to: {}".format(payload),
