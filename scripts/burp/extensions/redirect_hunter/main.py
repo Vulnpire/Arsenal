@@ -8,6 +8,8 @@ from urllib import quote
 import threading
 import time
 
+# (keep all your import statements unchanged)
+
 class BurpExtender(IBurpExtender, IHttpListener, ITab):
 
     def registerExtenderCallbacks(self, callbacks):
@@ -17,31 +19,58 @@ class BurpExtender(IBurpExtender, IHttpListener, ITab):
         self._stderr = PrintWriter(callbacks.getStderr(), True)
         self._callbacks.setExtensionName("Open Redirect Hunter")
 
-        self.payloads = [
-            "//evil.com",
-            "///evil.com",
-            "https://evil.com",
-            "http://evil.com",
-            "\\\\evil.com\\@good.com",
-            "/\\evil.com/%2f..",
-            "/\\evil.com/%2e%2e",
-            "https://evil.com#@target",
-            "https://evil.com%2f%2e%2e"
-        ]
+        # Load saved settings or use defaults
+        self.payloads = self.load_setting("payloads", [
+            "//evil.com", "///evil.com", "https://evil.com", "http://evil.com",
+            "\\\\evil.com\\@good.com", "/\\evil.com/%2f..", "/\\evil.com/%2e%2e",
+            "https://evil.com#@target", "https://evil.com%2f%2e%2e"
+        ])
+        self.keywords = self.load_setting("keywords", ["url", "redirect", "next", "target"])
+        self.delay = float(self._callbacks.loadExtensionSetting("delay") or "2.0")
+        self.extension_enabled = (self._callbacks.loadExtensionSetting("enabled") != "false")  # default True
 
-        self.keywords = ["url", "redirect", "next", "target"]
         self.last_request_time = 0
-        self.delay = 2
-        self.extension_enabled = True
         self.lock = threading.Lock()
         self.max_threads = 5
         self.active_threads = []
+        self.scanned_requests = set()
 
-        self.scanned_requests = set()  # To prevent re-scanning same requests
         self.init_gui()
         callbacks.addSuiteTab(self)
         callbacks.registerHttpListener(self)
         self.update_status("Extension loaded and ready.")
+
+    def load_setting(self, key, default):
+        saved = self._callbacks.loadExtensionSetting(key)
+        if saved:
+            if isinstance(default, list):
+                return [item.strip() for item in saved.strip().split('\n') if item.strip()]
+            return saved
+        return default
+
+    def save_settings(self, event):
+        try:
+            self.payloads = [p.strip() for p in self.payload_area.getText().splitlines() if p.strip()]
+            self.keywords = [k.strip().lower() for k in self.keyword_field.getText().split(',') if k.strip()]
+            self.delay = float(self.rate_field.getText().strip())
+            self.extension_enabled = self.toggle_checkbox.isSelected()
+
+            # [Persistent Setting]
+            self._callbacks.saveExtensionSetting("payloads", "\n".join(self.payloads))
+            self._callbacks.saveExtensionSetting("keywords", ",".join(self.keywords))
+            self._callbacks.saveExtensionSetting("delay", str(self.delay))
+            self._callbacks.saveExtensionSetting("enabled", "true" if self.extension_enabled else "false")
+
+            self.update_status("Settings saved and persisted.")
+        except Exception as e:
+            self._stderr.println("[!] Error updating settings: %s" % str(e))
+            self.update_status("Error saving settings.")
+
+    def toggle_extension(self, event):
+        self.extension_enabled = self.toggle_checkbox.isSelected()
+        self._callbacks.saveExtensionSetting("enabled", "true" if self.extension_enabled else "false")  # [Persistent Setting]
+        status = "enabled" if self.extension_enabled else "disabled"
+        self.update_status("Extension is now %s." % status)
 
     def init_gui(self):
         self.panel = JPanel(BorderLayout())
@@ -62,7 +91,7 @@ class BurpExtender(IBurpExtender, IHttpListener, ITab):
         self.rate_field = JTextField(str(self.delay), 5)
         settings_panel.add(self.rate_field)
 
-        self.toggle_checkbox = JCheckBox("Enable Extension", True)
+        self.toggle_checkbox = JCheckBox("Enable Extension", self.extension_enabled)
         self.toggle_checkbox.addActionListener(self.toggle_extension)
         settings_panel.add(self.toggle_checkbox)
 
@@ -73,6 +102,7 @@ class BurpExtender(IBurpExtender, IHttpListener, ITab):
         self.panel.add(settings_panel, BorderLayout.NORTH)
         self.panel.add(self.status_label, BorderLayout.SOUTH)
 
+
     def getTabCaption(self):
         return "Open Redirect Hunter"
 
@@ -82,21 +112,6 @@ class BurpExtender(IBurpExtender, IHttpListener, ITab):
     def update_status(self, message):
         self.status_label.setText("Status: " + message)
         self._stdout.println("[*] " + message)
-
-    def toggle_extension(self, event):
-        self.extension_enabled = self.toggle_checkbox.isSelected()
-        status = "enabled" if self.extension_enabled else "disabled"
-        self.update_status("Extension is now %s." % status)
-
-    def save_settings(self, event):
-        try:
-            self.payloads = [p.strip() for p in self.payload_area.getText().splitlines() if p.strip()]
-            self.keywords = [k.strip().lower() for k in self.keyword_field.getText().split(',') if k.strip()]
-            self.delay = float(self.rate_field.getText().strip())
-            self.update_status("Settings saved.")
-        except Exception as e:
-            self._stderr.println("[!] Error updating settings: %s" % str(e))
-            self.update_status("Error saving settings.")
 
     def processHttpMessage(self, toolFlag, messageIsRequest, messageInfo):
         if not self.extension_enabled or not messageIsRequest:
@@ -116,17 +131,21 @@ class BurpExtender(IBurpExtender, IHttpListener, ITab):
             if not query:
                 return
 
+            scanned_any = False
+
             for param in query.split('&'):
                 key, _, val = param.partition('=')
+                key = key.strip()
                 if any(word in key.lower() for word in self.keywords):
-                    key_id = str(url)
+                    key_id = (url.getPath(), key.lower())
                     if key_id not in self.scanned_requests:
                         self.scanned_requests.add(key_id)
-                        self.start_scan_thread(url, messageInfo)
-                    break
-
+                        if not scanned_any:
+                            self.start_scan_thread(url, messageInfo)
+                            scanned_any = True
         except Exception as e:
             self._stderr.println("[!] Error in processing request: %s" % str(e))
+
 
     def start_scan_thread(self, url, messageInfo):
         with self.lock:
