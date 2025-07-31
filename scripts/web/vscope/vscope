@@ -2,14 +2,11 @@
 
 # Usage: cat urls.txt | ./vscope -f path/to/oos.txt
 
-# Parse args
 while getopts ":f:" opt; do
   case ${opt} in
-    f ) OOS_FILE="$OPTARG"
-      ;;
+    f ) OOS_FILE="$OPTARG" ;;
     \? ) echo "Usage: vscope -f path/to/oos.txt" >&2
-         exit 1
-      ;;
+         exit 1 ;;
   esac
 done
 
@@ -18,8 +15,12 @@ if [[ -z "$OOS_FILE" || ! -f "$OOS_FILE" ]]; then
   exit 1
 fi
 
-# Read OOS patterns and build grep -v filters
-OOS_PATTERNS=$(sed '/^\s*$/d' "$OOS_FILE" | sed 's/[.[\*^$(){}?+|]/\\&/g')
+# Convert OOS patterns:
+# - Escape regex meta characters
+# - Convert '*' into '.*' for wildcard matching
+OOS_PATTERNS=$(sed '/^\s*$/d' "$OOS_FILE" \
+  | sed 's/[.[\^$()+?{|]/\\&/g' \
+  | sed 's/\*/.*/g')
 
-# Filter incoming lines
-grep -v -F -f <(echo "$OOS_PATTERNS")
+# Use grep -Ev to exclude matches
+grep -Ev -f <(echo "$OOS_PATTERNS")
