@@ -14,17 +14,17 @@ import (
 
 func main() {
         // Select all axiom instances first
-        selectCmd := exec.Command("axiom-select", "*")
+        /* selectCmd := exec.Command("axiom-select", "*")
         selectCmd.Stdout = os.Stdout
         selectCmd.Stderr = os.Stderr
         err := selectCmd.Run()
         if err != nil {
                 fmt.Println("Error: Failed to run 'axiom-select \"*\"'")
                 os.Exit(1)
-        }
+        }*/
 
         // Ensure axiom-scan is installed
-        _, err = exec.LookPath("axiom-scan")
+        _, err := exec.LookPath("axiom-scan")
         if err != nil {
                 fmt.Println("Error: axiom-scan is not installed or not in PATH.")
                 os.Exit(1)
