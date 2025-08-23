@@ -108,8 +108,8 @@ func main() {
         for scanner.Scan() {
                 line := scanner.Text()
 
-                // Skip axiom-scan banner (first 9 lines)
-                if lineCount < 9 {
+                // Skip axiom-scan banner (first 9|18 lines)
+                if lineCount < 18 {
                         lineCount++
                         continue
                 }
