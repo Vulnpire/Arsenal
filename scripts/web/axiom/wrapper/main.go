@@ -8,17 +8,29 @@ import (
         "os/signal"
         "regexp"
         "strings"
-        "sync"
         "syscall"
+        "sync"
 )
 
 func main() {
+        // Select all axiom instances first
+        /* selectCmd := exec.Command("axiom-select", "*")
+        selectCmd.Stdout = os.Stdout
+        selectCmd.Stderr = os.Stderr
+        err := selectCmd.Run()
+        if err != nil {
+                fmt.Println("Error: Failed to run 'axiom-select \"*\"'")
+                os.Exit(1)
+        }*/
+
         // Ensure axiom-scan is installed
-        if _, err := exec.LookPath("axiom-scan"); err != nil {
+        _, err := exec.LookPath("axiom-scan")
+        if err != nil {
                 fmt.Println("Error: axiom-scan is not installed or not in PATH.")
                 os.Exit(1)
         }
 
+        // Ensure module is provided
         if len(os.Args) < 3 || os.Args[1] != "-m" {
                 fmt.Println("Usage: cat input | axs -m <module> [other flags]")
                 os.Exit(1)
@@ -27,89 +39,101 @@ func main() {
         module := os.Args[2]
         args := append([]string{"-m", module}, os.Args[3:]...)
 
-        // Create temp input file
+        // Create a temp file for storing stdin input
         tempFile, err := os.CreateTemp("", "axs_input_*.txt")
         if err != nil {
                 fmt.Println("Error: Could not create temp file.")
                 os.Exit(1)
         }
-        defer os.Remove(tempFile.Name())
+        defer os.Remove(tempFile.Name()) // Ensure cleanup
 
-        // Read stdin into temp file
-        scanner := bufio.NewScanner(os.Stdin)
-        for scanner.Scan() {
-                fmt.Fprintln(tempFile, scanner.Text())
+        // Create the command but do not start it yet
+        cmd := exec.Command("axiom-scan", tempFile.Name(), "--rm-logs")
+        cmd.Args = append(cmd.Args, args...)
+
+        // Get stdout pipe
+        stdout, err := cmd.StdoutPipe()
+        if err != nil {
+                fmt.Println("Error: Could not capture output.")
+                os.Exit(1)
         }
-        tempFile.Close()
 
-        // Prepare axiom-scan command
-        cmd := exec.Command("axiom-scan", append([]string{tempFile.Name(), "--rm-logs"}, args...)...)
-
-        // Pipe stdout/stderr
-        stdout, _ := cmd.StdoutPipe()
-        stderr, _ := cmd.StderrPipe()
-
+        // Prevent multiple Wait() calls
         var waitOnce sync.Once
+
+        // Handle SIGINT (CTRL+C) for cleanup AFTER axiom-scan exits
         sigChan := make(chan os.Signal, 1)
         signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
         go func() {
                 <-sigChan
                 fmt.Println("\n[!] CTRL+C detected. Waiting for axiom-scan to exit...")
+
                 if cmd.Process != nil {
-                        waitOnce.Do(func() { cmd.Wait() })
+                        waitOnce.Do(func() {
+                                err := cmd.Wait()
+                                if err != nil {
+                                        fmt.Println("Error: axiom-scan exited with an error:", err)
+                                }
+                        })
                 }
+
                 os.Remove(tempFile.Name())
                 os.Exit(0)
         }()
 
+        // Read from stdin and write to temp file
+        scanner := bufio.NewScanner(os.Stdin)
+        for scanner.Scan() {
+                _, err := tempFile.WriteString(scanner.Text() + "\n")
+                if err != nil {
+                        fmt.Println("Error writing to temp file.")
+                        os.Exit(1)
+                }
+        }
+        tempFile.Close()
+
+        // Start axiom-scan
         err = cmd.Start()
         if err != nil {
-                fmt.Println("Error: Failed to start axiom-scan:", err)
+                fmt.Println("Error: Failed to start axiom-scan.")
                 os.Exit(1)
         }
 
-        // Combine stdout & stderr for live output
-        outScanner := bufio.NewScanner(stdout)
-        errScanner := bufio.NewScanner(stderr)
-
-        pathPattern := regexp.MustCompile(`==> /(home|root)/.*`)
-        const skipFirst = 18
-        const skipLast = 11
+        // Stream and filter axiom-scan output
+        scanner = bufio.NewScanner(stdout)
         lineCount := 0
-        buffer := make([]string, 0, skipLast+1)
+        pathPattern := regexp.MustCompile(`==> /(home|root)/.*`)
 
-        printLine := func(line string) {
-                // Remove paths
+        for scanner.Scan() {
+                line := scanner.Text()
+
+                // Skip axiom-scan banner (first 9|18 lines)
+                if lineCount < 18 {
+                        lineCount++
+                        continue
+                }
+
+                // Remove log file path lines
                 line = pathPattern.ReplaceAllString(line, "")
+
+                // Skip blank lines
                 if strings.TrimSpace(line) == "" {
-                        return
+                        continue
                 }
 
-                buffer = append(buffer, line)
-                if len(buffer) > skipLast {
-                        fmt.Println(buffer[0])
-                        buffer = buffer[1:]
-                }
+                // Output the clean result
+                fmt.Println(line)
         }
 
-        go func() {
-                for outScanner.Scan() {
-                        if lineCount < skipFirst {
-                                lineCount++
-                                continue
-                        }
-                        printLine(outScanner.Text())
+        // Wait for axiom-scan to finish
+        waitOnce.Do(func() {
+                err = cmd.Wait()
+                if err != nil {
+                        fmt.Println("Error: axiom-scan process exited with an error:", err)
                 }
-        }()
-        go func() {
-                for errScanner.Scan() {
-                        if lineCount < skipFirst {
-                                lineCount++
-                                continue
-                        }
-                        printLine(errScanner.Text())
-                }
-        }()
+        })
 
-        waitOnce.Do(func() { cmd.Wait() })
+        // Final cleanup
+        os.Remove(tempFile.Name())
 }
