@@ -34,12 +34,18 @@ combo | grep -P -i '(/admin|/dashboard|/panel|/phpmyadmin|/wp-admin|/confluence|
   | notify -silent -id sensitive -d 4 -bulk
 
 # ---------------------- Sensitive Files / Backups / Configs -------------------
-combo | grep -P -i '(\.git|\.svn|\.hg|\.bzr|\.env|\.env\.|\.bak|\.backup|\.old|\.log|\.npmrc|\.conf|\.config|config\.json|\.oradata|swagger\.json|\.arc|\.env\.prod|openapi\.json|user_data\.json|webpack\.config|\.rdb|oauth\.json|private\.xml|docker-compose|kubernetes|settings\.json|\.ini|\.sql|\.dump|\.tar|xmlrpc\.php|_fragment|env\.js|\.gitlab-ci\.yml|\.cfg|\.war|\.ear|\.jar|\.sqlitedb|\.sqlite3|\.properties|\.pem|\.key|\.crt|\.csr|\.p12|\.pfx|\.der|\.jks|\.keystore|\.db|\.mdb|\.sqlite|\.accdb|\.dbf|\.tmp|\.temp|\.orig|\.save|\.swp|\.swo|~|\.yaml|\.yml|\.secret|\.token|\.credentials|\.py|\.sh|\.pl|\.rb|\.ps1|\.plist|\.dmp|\.core|\.log\.[0-9]|appsettings\.json|\.yarnrc|\.bash_history|\.zsh_history|\.bashrc|\.zshrc|\.profile|\.viminfo|\.mysql_history|\.psql_history|\.terraformrc|\.terraform|\.dockerignore|\.gitignore|\.htaccess|\.htpasswd|web\.config|\.well-known|\.aws/credentials|\.azure|\.kube|composer\.json|composer\.lock|package-lock\.json|yarn\.lock|Gemfile\.lock|Pipfile\.lock|poetry\.lock|thumbs\.db|\.DS_Store|WEB-INF|META-INF|crossdomain\.xml|clientaccesspolicy\.xml|\.idea|\.vscode|\.vs|id_rsa|id_dsa|\.pub)' \
+# Match extensions in path (before ? or #), not in query parameters
+combo | grep -P -i '/[^?#/]*\.(git|svn|hg|bzr|env|bak|backup|old|log|npmrc|conf|config|sql|dump|tar|war|ear|jar|sqlite|sqlite3|sqlitedb|properties|pem|key|crt|csr|p12|pfx|der|jks|keystore|db|mdb|accdb|dbf|tmp|temp|orig|save|swp|swo|yaml|yml|ini|secret|token|credentials|py|sh|pl|rb|ps1|plist|dmp|core|pub)(\?|#|$)' \
   | anew "${OUT_DIR}/bkups/sensitive_files.txt" \
   | notify -silent -id extensions -d 4 -bulk
 
+# Specific file patterns (not extensions)
+combo | grep -P -i '(/|^)[^?#]*(\.git/|\.svn/|\.env|config\.json|swagger\.json|openapi\.json|user_data\.json|webpack\.config|oauth\.json|private\.xml|docker-compose|kubernetes|settings\.json|xmlrpc\.php|_fragment|env\.js|\.gitlab-ci\.yml|appsettings\.json|\.yarnrc|\.bash_history|\.zsh_history|\.bashrc|\.zshrc|\.profile|\.viminfo|\.mysql_history|\.psql_history|\.terraformrc|\.terraform/|\.dockerignore|\.gitignore|\.htaccess|\.htpasswd|web\.config|\.well-known/|\.aws/|\.azure/|\.kube/|composer\.json|composer\.lock|package-lock\.json|yarn\.lock|Gemfile\.lock|Pipfile\.lock|poetry\.lock|thumbs\.db|\.DS_Store|WEB-INF/|META-INF/|crossdomain\.xml|clientaccesspolicy\.xml|\.idea/|\.vscode/|\.vs/|id_rsa|id_dsa|\.log\.[0-9])(\?|#|$|/)' \
+  | anew "${OUT_DIR}/bkups/sensitive_files.txt" \
+  | notify -silent -id files -d 4 -bulk
+
 # ---------------------- Dependency Confusion ---------------------------------
-combo | grep -P -i '(^|/)(packages?\.json|package-lock\.json|composer\.json|Gemfile|requirements\.txt|go\.mod|pom\.xml|build\.gradle)(?=($|[/?#]))' \
+combo | grep -P -i '/[^?#/]*(packages?\.json|package-lock\.json|composer\.json|Gemfile|requirements\.txt|go\.mod|pom\.xml|build\.gradle)(\?|#|$)' \
   | anew packages.txt \
   | HexDox -c=10 2>/dev/null \
   | notify -silent -id depconf -bulk -d 2
@@ -50,8 +56,13 @@ combo | grep -P -i '(/login|/logout|/signin|/signout|/signup|/register|/auth|/oa
   | notify -silent -id auth -d 4 -bulk
 
 # ---------------------- Session params (JWT/CSRF/etc.) ------------------------
-combo | grep -P -i '(\?|&)(token|auth|authorization|bearer|session|sessid|sid|csrf|xsrf|_csrf|authenticity_token|state|nonce|access_token|refresh_token|id_token|api_key|apikey|key|secret|ey[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)=' \
+combo | grep -P -i '(\?|&)(token|auth|authorization|bearer|session|sessid|sid|csrf|xsrf|_csrf|authenticity_token|state|nonce|access_token|refresh_token|id_token|api_key|apikey|key|secret)=' \
   | anew "${OUT_DIR}/sessions/session_management.txt" \
+  | notify -silent -id sessions -d 4 -bulk
+
+# JWT tokens in parameters
+combo | grep -P '(\?|&)[^=]+=ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' \
+  | anew "${OUT_DIR}/sessions/jwt_in_params.txt" \
   | notify -silent -id sessions -d 4 -bulk
 
 # ---------------------- API Enumeration --------------------------------------
@@ -70,20 +81,20 @@ cat "$NORM_FILE" \
   | sort -u \
   | grep -P -vi 'www\.|forum|docs|assets|about|blog|news|help|support|cdn\.|static\.' \
   | anew "${OUT_DIR}/roots/roots.txt" \
-  | httpx -random-agent -mc 200,201,204,301,302,307,401,403 -threads 300 -silent 2>/dev/null \
+  | axs -m httpx -random-agent -mc 200,201,204,301,302,307,401,403 -threads 300 -silent 2>/dev/null \
   | notify -silent -id roots -d 4 -bulk
 
 # ---------------------- Archives ---------------------------------------------
-combo \
-  | grep -P -i '\.(zip|tar|tar\.gz|tgz|gz|bz2|xz|7z|rar|zst|lz|lzma|cab|apk|ipa|deb|rpm|pkg|dmg|iso|img|vhd|vmdk|ova|cpio|ar|sqsh|sfs|bin|exe|msi|dll)(?=($|[/?#]))' \
+# Match archive extensions in path only, before query string
+combo | grep -P -i '/[^?#/]*\.(zip|tar|tar\.gz|tgz|gz|bz2|xz|7z|rar|zst|lz|lzma|cab|apk|ipa|deb|rpm|pkg|dmg|iso|img|vhd|vmdk|ova|cpio|ar|sqsh|sfs|bin|exe|msi|dll)(\?|#|$)' \
   | grep -P -vi 'dropbox|googledrive|onedrive|box\.com|mediafire|mega\.nz|wetransfer|downloads|updates|release|releases|installers|setup|mirror|cdn\.|pypi|npm|rubygems|cpan|cran|maven|nuget|apt|yum|dnf|backup|backups|old|temp|tmp|cache|github|gitlab|bitbucket|sourceforge|apache\.org' \
   | anew "${OUT_DIR}/archives/archive_files.txt" \
-  | httpx -mc 200 -random-agent -threads 300 -silent 2>/dev/null \
+  | axs -m httpx -mc 200 -random-agent -threads 300 -silent 2>/dev/null \
   | notify -silent -id archives -d 4 -bulk
 
 # ---------------------- Cloud Storage Buckets ---------------------------------
 # S3 buckets
-combo | grep -P -i '(s3[.-]|\.s3[.-]|\.s3\.)(amazonaws\.com|amazonaws\.com\.[a-z]{2}|eu|us|ap|sa|ca)' \
+combo | grep -P -i '(s3[.-]|\.s3[.-]|\.s3\.)(amazonaws\.com|amazonaws\.com\.[a-z]{2})' \
   | anew "${OUT_DIR}/buckets/s3_buckets.txt" \
   | notify -silent -id s3buckets -d 4 -bulk
 
@@ -114,7 +125,7 @@ combo | grep -P -i '(\?|&)(id|user|username|email|search|query|keyword|q|s|filte
   | notify -silent -id sqli -d 4 -bulk
 
 # SQL error indicators in URLs (for testing responses)
-combo | grep -P -i "(sql|mysql|mssql|postgres|oracle|sqlite|syntax|error|warning|exception)" \
+combo | grep -P -i '(sql|mysql|mssql|postgres|oracle|sqlite|syntax|error|warning|exception)' \
   | anew "${OUT_DIR}/sqli/sqli_error_hints.txt"
 
 # ---------------------- LFI/Path Traversal candidates -------------------------
@@ -147,7 +158,7 @@ combo | grep -P -i '(\?|&)(upload|file|attachment|avatar|photo|image|document|me
   | notify -silent -id upload -d 4 -bulk
 
 # ---------------------- Debug/Development endpoints ---------------------------
-combo | grep -P -i '(/debug|/trace|/console|/test|/dev|/development|/staging|/phpinfo|/info|/health|/status|/metrics|/actuator|/jolokia|/env|/dump|/heapdump|/threaddump|/trace|/loggers|/auditevents|/httptrace)(/|$|\?)' \
+combo | grep -P -i '(/debug|/trace|/console|/test|/dev|/development|/staging|/phpinfo|/info|/health|/status|/metrics|/actuator|/jolokia|/env|/dump|/heapdump|/threaddump|/loggers|/auditevents|/httptrace)(/|$|\?)' \
   | anew "${OUT_DIR}/debug/debug_endpoints.txt" \
   | notify -silent -id debug -d 4 -bulk
 
@@ -168,23 +179,21 @@ combo | grep -P 'ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' \
   | notify -silent -id jwttokens -d 4 -bulk
 
 # ---------------------- XXE candidates ---------------------------------------
-combo | grep -P -i '(\.xml|\.wsdl|\.xsd|\.dtd|\.plist|\.svg|\.rss|\.atom|\.xhtml|\.xsl|\.xslt)(?=($|[/?#]))' \
-  | anew "${OUT_DIR}/xxe/xxe_candidates.txt" \
-  | notify -silent -id xxe -d 4 -bulk
+# Match XML-related extensions in path only
+combo | grep -P -i '/[^?#/]*\.(xml|wsdl|xsd|dtd|plist|svg|rss|atom|xhtml|xsl|xslt)(\?|#|$)' \
+  | anew "${OUT_DIR}/xxe/xxe_candidates.txt"
 
 combo | grep -P -i '(/xml|/api/xml|/rest/xml|/xmlrpc|/soap|/services|/ws)(/|$|\?|wsdl)' \
-  | anew "${OUT_DIR}/xxe/xxe_candidates.txt" \
-  | notify -silent -id xxe -d 4 -bulk
+  | anew "${OUT_DIR}/xxe/xxe_candidates.txt"
 
 combo | grep -P -i '(\?|&)(format|type|accept|contenttype|content-type)=(xml|text%2Fxml|application%2Fxml)' \
-  | anew "${OUT_DIR}/xxe/xxe_candidates.txt" \
-  | notify -silent -id xxe -d 4 -bulk
+  | anew "${OUT_DIR}/xxe/xxe_candidates.txt"
 
 # Live probe for XML content-types
 if command -v httpx &> /dev/null; then
   cat "${OUT_DIR}/xxe/xxe_candidates.txt" 2>/dev/null \
     | sort -u \
-    | httpx -silent -random-agent -mc 200 -content-type -threads 100 2>/dev/null \
+    | axs -m httpx -silent -random-agent -mc 200 -content-type -threads 100 2>/dev/null \
     | grep -i '\[.*xml' \
     | anew "${OUT_DIR}/xxe/xxe_candidates_live.txt" \
     | notify -silent -id xxe -d 4 -bulk
@@ -211,9 +220,10 @@ combo | grep -P -i '(/graphql|/graphiql|/gql|/api/graphql|/v[0-9]+/graphql|/quer
   | notify -silent -id graphql -d 4 -bulk
 
 # ---------------------- Interesting extensions --------------------------------
-combo | grep -P -i '\.(jsp|jsf|asp|aspx|php|php[3-8]|cfm|cgi|pl|py|rb|do|action|jspx)(?=($|[/?#]))' \
+# Match server-side extensions in path only, not in parameters
+combo | grep -P -i '/[^?#/]*\.(jsp|jsf|asp|aspx|php|php[3-8]|cfm|cgi|pl|py|rb|do|action|jspx)(\?|#|$)' \
   | anew "${OUT_DIR}/bkups/interesting_extensions.txt" \
-  | notify -silent -id extensions -d 4 -bulk
+  | notify -silent -id serverside -d 4 -bulk
 
 # ---------------------- Status summary ----------------------------------------
 echo "[+] Reconnaissance complete. Results saved to: ${OUT_DIR}"
