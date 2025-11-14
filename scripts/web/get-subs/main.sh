@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # get-subs - Subdomain Enumeration Script
-# Usage: get-subs <domains.txt> -o <output_dir> [-brute]
+# Usage: get-subs <domains.txt> -o <output_dir> [-brute] [-portscan]
 
 show_help() {
-    echo "Usage: get-subs <domains.txt> -o <output_dir> [-brute]"
+    echo "Usage: get-subs <domains.txt> -o <output_dir> [-brute] [-portscan]"
     echo ""
     echo "Options:"
     echo "  -o          Output directory (required)"
     echo "  -brute      Enable bruteforce enumeration"
+    echo "  -portscan   Run naabu port scan on discovered subdomains"
     echo "  -h, --help  Show this help message"
     exit 1
 }
@@ -17,6 +18,7 @@ show_help() {
 INPUT_FILE=""
 OUTPUT_DIR=""
 BRUTE=false
+PORTSCAN=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -26,6 +28,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -brute)
             BRUTE=true
+            shift
+            ;;
+        -portscan)
+            PORTSCAN=true
             shift
             ;;
         -h|--help)
@@ -62,6 +68,7 @@ echo "[*] Starting subdomain enumeration"
 echo "[*] Input: $INPUT_FILE"
 echo "[*] Output: $OUTPUT_FILE"
 echo "[*] Bruteforce: $BRUTE"
+echo "[*] Port scan: $PORTSCAN"
 echo ""
 
 # Subfinder
@@ -126,3 +133,14 @@ echo ""
 echo "[✓] Enumeration complete!"
 echo "[✓] Total subdomains: $TOTAL"
 echo "[✓] Output saved to: $OUTPUT_FILE"
+
+# Port scan (optional)
+if [[ "$PORTSCAN" == true ]]; then
+    echo ""
+    echo "[+] Running naabu port scan..."
+    cat "$OUTPUT_FILE" | axs -m naabu -ep 80,443 -o "$OUTPUT_DIR/ports.txt"
+    PORT_COUNT=$(wc -l < "$OUTPUT_DIR/ports.txt")
+    echo "[✓] Port scan complete!"
+    echo "[✓] Results saved to: $OUTPUT_DIR/ports.txt"
+    echo "[✓] Total open ports: $PORT_COUNT"
+fi
