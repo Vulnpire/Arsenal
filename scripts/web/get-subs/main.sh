@@ -107,7 +107,7 @@ fi
 
 # Banshee
 echo "[+] Running banshee..."
-banshee -f "$INPUT_FILE" -s | anew "$OUTPUT_FILE"
+cat "$INPUT_FILE" | banshee -s -learn -quantity 10 -adaptive -deep -smart -pages 5 | anew "$OUTPUT_FILE"
 
 # Filter by wildcard domains
 echo "[+] Filtering results..."
