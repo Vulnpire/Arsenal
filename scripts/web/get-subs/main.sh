@@ -138,7 +138,7 @@ echo "[✓] Output saved to: $OUTPUT_FILE"
 if [[ "$PORTSCAN" == true ]]; then
     echo ""
     echo "[+] Running naabu port scan..."
-    cat "$OUTPUT_FILE" | axs -m naabu -ep 80,443 -o "$OUTPUT_DIR/ports.txt"
+    cat "$OUTPUT_FILE" | axs -m naabu -o "$OUTPUT_DIR/ports.txt"
     PORT_COUNT=$(wc -l < "$OUTPUT_DIR/ports.txt")
     echo "[✓] Port scan complete!"
     echo "[✓] Results saved to: $OUTPUT_DIR/ports.txt"
